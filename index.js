@@ -1,30 +1,51 @@
-const sha3 = require('js-sha3').sha3_256
+const sha3 = require('js-sha3').keccak_256
 const uts46 = require('idna-uts46')
 
 module.exports = function namehash (inputName) {
   // Reject empty names:
-  if (!inputName || inputName === '') {
-    let result = '0x'
-    for (let i = 0; i < 32; i++) {
-      result += '00'
-    }
-    return result
+  let node = ''
+  for (let i = 0; i < 32; i++) {
+    node += '00'
   }
 
   name = normalize(inputName)
-  const split = name.split('.')
 
-  const label = split.shift()
-  const remainder = split.join('.')
+  if (name) {
 
-  const remainderHash = namehash(remainder).substr(2)
-  const labelHash = sha3(label)
-  if (remainderHash.match(/^0+$/)) {
-    return '0x' + labelHash
+    const labels = name.split('.')
+    console.dir({ labels })
+
+    for(var i = labels.length - 1; i >= 0; i--) {
+      console.log("BEFORE")
+      console.dir({ node, label:labels[i] })
+      const labelSha = sha3(labels[i])
+      console.dir({ node, label:labels[i], labelSha })
+      node = sha3(node + labelSha)
+      console.log("AFTER")
+      console.dir({ node })
+    }
+
+    /*
+    const label = labels.shift()
+    const remainder = labels.join('.')
+
+    const remainderHash = namehash(remainder).substr(2)
+    const labelHash = sha3(label)
+    if (remainderHash.match(/^0+$/)) {
+      return '0x' + labelHash
+    }
+    return '0x' + sha3(remainderHash + remainderHash)
+    */
+
   }
-  return '0x' + sha3(remainderHash + remainderHash)
+
+  return `0x${node}`
+}
+
+function concat (buffA, buffB) {
+
 }
 
 function normalize(name) {
-  return uts46.toUnicode(name, {useStd3ASCII: true, transitional: false})
+  return name ? uts46.toUnicode(name, {useStd3ASCII: true, transitional: false}) : name
 }
