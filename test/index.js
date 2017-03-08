@@ -19,23 +19,6 @@ test('empty param', (t) => {
   t.equal(output, expected)
 })
 
-/*
-test('TLD eth', (t) => {
-  t.plan(1)
-  const input = 'eth'
-  const expected = '0x4f5b812789fc606be1b3b16908db13fc7a9adf7ca72641f84d75b47069d3d7f0'
-  const output = namehash(input)
-  t.equal(output, expected)
-})
-*/
-
-/*
- * Commented out because it turns out the EIP has incorrect specs:
- * https://github.com/ethereum/EIPs/issues/137#issuecomment-284918147
- *
- * The correct specs are here, but too sparse to use:
- * http://docs.ens.domains/en/latest/introduction.html#namehash
- */
 test('TLD eth', (t) => {
   t.plan(1)
   const input = 'eth'
@@ -51,3 +34,4 @@ test('foo.eth', (t) => {
   const output = namehash(input)
   t.equal(output, expected)
 })
+
