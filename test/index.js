@@ -19,6 +19,7 @@ test('empty param', (t) => {
   t.equal(output, expected)
 })
 
+/*
 test('TLD eth', (t) => {
   t.plan(1)
   const input = 'eth'
@@ -26,6 +27,7 @@ test('TLD eth', (t) => {
   const output = namehash(input)
   t.equal(output, expected)
 })
+*/
 
 /*
  * Commented out because it turns out the EIP has incorrect specs:
@@ -33,6 +35,15 @@ test('TLD eth', (t) => {
  *
  * The correct specs are here, but too sparse to use:
  * http://docs.ens.domains/en/latest/introduction.html#namehash
+ */
+test('TLD eth', (t) => {
+  t.plan(1)
+  const input = 'eth'
+  const expected = '0x93cdeb708b7545dc668eb9280176169d1c33cfd8ed6f04690a0bcc88a93fc4ae'
+  const output = namehash(input)
+  t.equal(output, expected)
+})
+
 test('foo.eth', (t) => {
   t.plan(1)
   const input = 'foo.eth'
@@ -40,4 +51,3 @@ test('foo.eth', (t) => {
   const output = namehash(input)
   t.equal(output, expected)
 })
-*/
