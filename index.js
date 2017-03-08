@@ -18,17 +18,14 @@ module.exports = function namehash (inputName) {
   const name = normalize(inputName)
   const split = name.split('.')
 
-  const label = toBuffer(split.shift())
-  const remainder = toBuffer(split.join('.'))
+  const label = split.shift()
+  const remainder = split.join('.')
 
   console.log('finishing with ', typeof sha3(label))
 
   console.log(sha3(label))
 
-  const result =  sha3(namehash(remainder) + sha3(label))
-  console.dir(result)
-  throw new Error('stop')
-  return result
+  return sha3(namehash(remainder) + sha3(label))
 }
 
 /*
@@ -39,8 +36,4 @@ function sha3 (input) {
 
 function normalize(name) {
   return uts46.toUnicode(name, {useStd3ASCII: true, transitional: false});
-}
-
-function toBuffer(str) {
-  return new Buffer(str, 'utf8')
 }
