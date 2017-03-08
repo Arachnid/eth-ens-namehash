@@ -2,6 +2,12 @@
 
 A javascript library for generating ENS namehashes per spec https://github.com/ethereum/EIPs/issues/137
 
+[Available on NPM](https://www.npmjs.com/package/eth-ens-namehash)
+
+## Installation
+
+`npm install eth-ens namehash -S`
+
 ## Usage
 
 ```javascript
