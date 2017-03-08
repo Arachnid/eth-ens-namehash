@@ -1,6 +1,6 @@
 # Eth ENS Namehash [![CircleCI](https://circleci.com/gh/flyswatter/eth-ens-namehash.svg?style=svg)](https://circleci.com/gh/flyswatter/eth-ens-namehash)
 
-A javascript library for generating ENS namehashes per spec https://github.com/ethereum/EIPs/issues/137
+A javascript library for generating Ethereum Name Service (ENS) namehashes per [spec](https://github.com/ethereum/EIPs/issues/137).
 
 [Available on NPM](https://www.npmjs.com/package/eth-ens-namehash)
 
