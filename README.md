@@ -2,8 +2,6 @@
 
 A javascript library for generating ENS namehashes per spec https://github.com/ethereum/EIPs/issues/137
 
-# Does not yet work!
-
 ## Usage
 
 ```javascript
