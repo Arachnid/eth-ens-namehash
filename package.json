@@ -22,5 +22,10 @@
   "homepage": "https://github.com/flyswatter/eth-ens-namehash#readme",
   "devDependencies": {
     "tape": "^4.6.3"
+  },
+  "dependencies": {
+    "crypto-js": "^3.1.9-1",
+    "idna-uts46": "^1.0.1",
+    "js-sha3": "^0.5.7"
   }
 }
