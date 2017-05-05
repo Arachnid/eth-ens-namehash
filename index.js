@@ -1,7 +1,7 @@
 var sha3 = require('js-sha3').keccak_256
 var uts46 = require('idna-uts46')
 
-module.exports = function namehash (inputName) {
+function namehash (inputName) {
   // Reject empty names:
   var node = ''
   for (var i = 0; i < 32; i++) {
@@ -25,3 +25,6 @@ module.exports = function namehash (inputName) {
 function normalize(name) {
   return name ? uts46.toUnicode(name, {useStd3ASCII: true, transitional: false}) : name
 }
+
+exports.hash = namehash
+exports.normalize = normalize
