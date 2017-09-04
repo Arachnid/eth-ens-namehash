@@ -6,7 +6,7 @@ A javascript library for generating Ethereum Name Service (ENS) namehashes per [
 
 ## Installation
 
-`npm install eth-ens namehash -S`
+`npm install eth-ens-namehash -S`
 
 ## Usage
 
