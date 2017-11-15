@@ -1,5 +1,5 @@
 const test = require('tape')
-const namehash = require('../')
+const namehash = require('../dist')
 
 // Test results specified in original ENS Proposal:
 // https://github.com/ethereum/EIPs/issues/137

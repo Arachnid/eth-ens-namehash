@@ -20,3 +20,7 @@ var input = getUserInput()
 var normalized = namehash.normalize(input)
 ```
 
+## Development
+
+This module supports advanced JavaScript syntax, but exports an ES5-compatible module. To re-build the exported module after making changes, run `npm run bundle` (must have [browserify](http://browserify.org/) installed).
+
