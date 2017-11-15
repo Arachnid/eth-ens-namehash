@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/flyswatter/eth-ens-namehash.git"
+    "url": "git+ssh://git@github.com/danfinlay/eth-ens-namehash.git"
   },
   "keywords": [
     "Ethereum",
@@ -18,9 +18,9 @@
   "author": "Dan Finlay <dan@danfinlay.com>",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/flyswatter/eth-ens-namehash/issues"
+    "url": "https://github.com/danfinlay/eth-ens-namehash/issues"
   },
-  "homepage": "https://github.com/flyswatter/eth-ens-namehash#readme",
+  "homepage": "https://github.com/danfinlay/eth-ens-namehash#readme",
   "devDependencies": {
     "tape": "^4.6.3",
     "babel-preset-es2015": "^6.24.1",
