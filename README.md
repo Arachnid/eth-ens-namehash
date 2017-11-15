@@ -20,6 +20,17 @@ var input = getUserInput()
 var normalized = namehash.normalize(input)
 ```
 
+## Security Warning
+
+ENS Supports UTF-8 characters, and so many duplicate names are possible. For example:
+
+- faceboоk.eth
+- facebook.eth
+
+The first one has non-ascii chars. (control+F on this page and search for facebook, only the second one will match).
+
+namehash.normalize() doesn't automagically remap those, and so other precautions should be taken to avoid user phishing.
+
 ## Development
 
 This module supports advanced JavaScript syntax, but exports an ES5-compatible module. To re-build the exported module after making changes, run `npm run bundle` (must have [browserify](http://browserify.org/) installed).
