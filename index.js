@@ -19,8 +19,7 @@ function namehash (inputName) {
     }
   }
 
-  return `0x${node}`
-}
+  return '0x' + node
 
 function normalize(name) {
   return name ? uts46.toUnicode(name, {useStd3ASCII: true, transitional: false}) : name
