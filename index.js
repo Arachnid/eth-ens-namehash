@@ -1,5 +1,5 @@
 var sha3 = require('js-sha3').keccak_256
-var uts46 = require('idna-uts46')
+var uts46 = require('idna-uts46-hx')
 
 function namehash (inputName) {
   // Reject empty names:
