@@ -2662,7 +2662,7 @@ function namehash (inputName) {
     }
   }
 
-  return `0x${node}`
+  return '0x' + node
 }
 
 function normalize(name) {
