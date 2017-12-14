@@ -35,10 +35,20 @@ test('foo.eth', (t) => {
   t.equal(output, expected)
 })
 
-test('normalize', (t) => {
+test('normalize ascii domain', (t) => {
   t.plan(1)
-  const input = 'foo.eth'
+  const input = 'foo.eth' // latin chars only
   const expected = 'foo.eth'
   const output = namehash.normalize(input)
   t.equal(output, expected)
 })
+
+
+test('normalize international domain', (t) => {
+  t.plan(1)
+  const input = 'fоо.eth' // with cyrillic 'o'
+  const expected = 'xn--f-1tba.eth'
+  const output = namehash.normalize(input)
+  t.equal(output, expected)
+})
+
