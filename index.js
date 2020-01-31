@@ -15,7 +15,7 @@ function namehash (inputName) {
 
     for(var i = labels.length - 1; i >= 0; i--) {
       var labelSha = sha3(labels[i])
-      node = sha3(new Buffer(node + labelSha, 'hex'))
+      node = sha3(Buffer.from(node + labelSha, 'hex'))
     }
   }
 
