@@ -31,7 +31,3 @@ The first one has non-ascii chars. (control+F on this page and search for facebo
 
 namehash.normalize() doesn't automagically remap those, and so other precautions should be taken to avoid user phishing.
 
-## Development
-
-This module supports advanced JavaScript syntax, but exports an ES5-compatible module. To re-build the exported module after making changes, run `npm run bundle` (must have [browserify](http://browserify.org/) installed).
-

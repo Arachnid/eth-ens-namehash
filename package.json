@@ -4,7 +4,6 @@
   "description": "A simple module for generating ENS namehashes per spec https://github.com/ethereum/EIPs/issues/137",
   "main": "index.js",
   "scripts": {
-    "bundle": "browserify index.js -o dist/index.js",
     "test": "node test"
   },
   "repository": {
