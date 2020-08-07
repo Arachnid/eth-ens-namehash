@@ -43,12 +43,34 @@ test('normalize ascii domain', (t) => {
   t.equal(output, expected)
 })
 
-
-test('normalize international domain', (t) => {
+test('Don\'t normalize international domain', (t) => {
   t.plan(1)
   const input = 'fоо.eth' // with cyrillic 'o'
-  const expected = 'xn--f-1tba.eth'
+  const expected = 'fоо.eth' // with cyrillic 'o'
   const output = namehash.normalize(input)
   t.equal(output, expected)
 })
 
+test('Hash international domain', (t) => {
+  t.plan(1)
+  const input = 'fоо.eth' // with cyrillic 'o'
+  const expected = '0x4ba2c679a3fd1e83c41104c61c8b149647e61d171805ef29338d789509c47be3'
+  const output = namehash.hash(input)
+  t.equal(output, expected)
+})
+
+test('Don\'t normalize international domain', (t) => {
+  t.plan(1)
+  const input = '🇳🇵🇳🇵🇳🇵.eth' // emoji
+  const expected = '🇳🇵🇳🇵🇳🇵.eth'
+  const output = namehash.normalize(input)
+  t.equal(output, expected)
+})
+
+test('Namehash 🇳🇵🇳🇵🇳🇵.eth', (t) => {
+  t.plan(1)
+  const input = '🇳🇵🇳🇵🇳🇵.eth' // emoji https://etherscan.io/address/%F0%9F%87%B3%F0%9F%87%B5%F0%9F%87%B3%F0%9F%87%B5%F0%9F%87%B3%F0%9F%87%B5.eth
+  const expected = '0xdfd7de6df978a1995e8239e596a4195d01e43878b8d66850a3e744bf5d136cf6'
+  const output = namehash.hash(input)
+  t.equal(output, expected)
+})
