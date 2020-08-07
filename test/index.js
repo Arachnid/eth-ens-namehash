@@ -67,9 +67,25 @@ test('Don\'t normalize international domain', (t) => {
   t.equal(output, expected)
 })
 
-test('Namehash 🇳🇵🇳🇵🇳🇵.eth', (t) => {
+test('Namehash emoji domain', (t) => {
   t.plan(1)
-  const input = '🇳🇵🇳🇵🇳🇵.eth' // emoji https://etherscan.io/address/%F0%9F%87%B3%F0%9F%87%B5%F0%9F%87%B3%F0%9F%87%B5%F0%9F%87%B3%F0%9F%87%B5.eth
+  const input = '🇳🇵🇳🇵🇳🇵.eth' // https://etherscan.io/address/%F0%9F%87%B3%F0%9F%87%B5%F0%9F%87%B3%F0%9F%87%B5%F0%9F%87%B3%F0%9F%87%B5.eth
+  const expected = '0xdfd7de6df978a1995e8239e596a4195d01e43878b8d66850a3e744bf5d136cf6'
+  const output = namehash.hash(input)
+  t.equal(output, expected)
+})
+
+test('Normalize punycode domain to unicode', (t) => {
+  t.plan(1)
+  const input = 'xn--r77haagbb.eth'
+  const expected = '🇳🇵🇳🇵🇳🇵.eth'
+  const output = namehash.normalize(input)
+  t.equal(output, expected)
+})
+
+test('Namehash as punycode domain', (t) => {
+  t.plan(1)
+  const input = 'xn--r77haagbb.eth' // 🇳🇵🇳🇵🇳🇵.eth
   const expected = '0xdfd7de6df978a1995e8239e596a4195d01e43878b8d66850a3e744bf5d136cf6'
   const output = namehash.hash(input)
   t.equal(output, expected)
