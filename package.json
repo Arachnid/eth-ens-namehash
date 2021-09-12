@@ -1,10 +1,10 @@
 {
   "name": "@ensdomains/eth-ens-namehash",
-  "version": "2.0.11",
+  "version": "2.0.13",
   "description": "A simple module for generating ENS namehashes per spec https://github.com/ethereum/EIPs/issues/137",
   "main": "dist/index.js",
   "scripts": {
-    "bundle": "browserify index.js -o dist/index.js",
+    "bundle": "browserify index.js -o dist/index.js && cp node_modules/idna-uts46-hx/idna-map.js dist/",
     "test": "node test"
   },
   "repository": {
