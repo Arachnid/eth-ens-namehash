@@ -1,5 +1,5 @@
 const test = require('tape')
-const namehash = require('../')
+const namehash = require('../dist')
 
 // Test results specified in original ENS Proposal:
 // https://github.com/ethereum/EIPs/issues/137
@@ -52,3 +52,10 @@ test('normalize international domain', (t) => {
   t.equal(output, expected)
 })
 
+test('normalize emoji domain', (t) => {
+  t.plan(1)
+  const input = '🦚.eth'
+  const expected = 'xn--qt9h.eth'
+  const output = namehash.normalize(input)
+  t.equal(output, expected)
+})
