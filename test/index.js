@@ -47,7 +47,15 @@ test('normalize ascii domain', (t) => {
 test('normalize international domain', (t) => {
   t.plan(1)
   const input = 'fоо.eth' // with cyrillic 'o'
-  const expected = 'xn--f-1tba.eth'
+  const expected = 'fоо.eth'
+  const output = namehash.normalize(input)
+  t.equal(output, expected)
+})
+
+test('normalize capitalized domain', (t) => {
+  t.plan(1)
+  const input = 'Foo.eth' // latin chars only
+  const expected = 'foo.eth'
   const output = namehash.normalize(input)
   t.equal(output, expected)
 })
@@ -55,7 +63,7 @@ test('normalize international domain', (t) => {
 test('normalize emoji domain', (t) => {
   t.plan(1)
   const input = '🦚.eth'
-  const expected = 'xn--qt9h.eth'
+  const expected = '🦚.eth'
   const output = namehash.normalize(input)
   t.equal(output, expected)
 })
