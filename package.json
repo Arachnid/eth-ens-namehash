@@ -21,11 +21,13 @@
     "url": "https://github.com/ensdomains/eth-ens-namehash/issues"
   },
   "homepage": "https://github.com/ensdomains/eth-ens-namehash#readme",
+  "dependencies": {
+    "idna-uts46-hx": "^3.4.0",
+    "js-sha3": "^0.5.7"
+  }
   "devDependencies": {
     "@rollup/plugin-commonjs": "^20.0.0",
     "@rollup/plugin-node-resolve": "^13.0.5",
-    "idna-uts46-hx": "^3.4.0",
-    "js-sha3": "^0.5.7",
     "rollup": "^2.57.0",
     "tape": "^4.6.3"
   },
