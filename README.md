@@ -1,3 +1,35 @@
+# Todo
+
+* Decide Top-level API Names
+	* Current export is: `{hash, normalize}`
+		* `hash(name: string): string<0x+64hex>`
+		* `normalize(name: string): string`
+	* [@adraffy/ens_normalize](https://github.com/adraffy/eth-ens-namehash)
+		* `ens_normalize(name: string): string`
+		* `ens_beautify(name: string): string` (Util)  
+			&rarr; `beautify()`
+		* `ens_tokenize(name: string): Token[]` (Util)  
+		&rarr; `tokenize()`
+		* `ens_emoji(): number[][]`  
+		&rarr; `emojis()`
+		* `ens_normalize_fragment(frag: string): string` (LL)  
+		&rarr; `normalizeFragment()`
+		* `ens_normalize_post_check(norm: string): string` (LL)  
+		 &rarr; `normalizePostCheck()`
+		* `nfd(cps: number[]): number[]` (LL, Util) &rarr; *hide*
+		* `nfc(cps: number[]): number[]` (LL, Util) &rarr; *hide*
+* Decide Data Location  
+*probably direct-copy from [@adraffy/ensip-norm](https://github.com/adraffy/ensip-norm)*
+	* `chars.json`
+	* `emoji.json`
+	* `tests.json`
+* Other Notes:
+	* `js-sha3` shouldn't be a dev-dependancy
+	* How do I link to the ENSIP?	
+
+
+---
+
 # Eth ENS Namehash (Fork)
 
 A javascript library for generating Ethereum Name Service (ENS) namehashes per [spec](https://github.com/ethereum/EIPs/issues/137).
