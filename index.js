@@ -8,7 +8,7 @@ function namehash (inputName) {
     node += '00'
   }
 
-  name = normalize(inputName)
+  var name = normalize(inputName)
 
   if (name) {
     var labels = name.split('.')
@@ -23,8 +23,10 @@ function namehash (inputName) {
 }
 
 function normalize(name) {
-  return name ? uts46.toAscii(name, {useStd3ASCII: true, transitional: false}) : name
+  return name ? uts46.toUnicode(name, {useStd3ASCII: true, transitional: false}) : name
 }
 
-exports.hash = namehash
-exports.normalize = normalize
+module.exports = {
+  hash: namehash,
+  normalize
+}

@@ -1,5 +1,5 @@
 const test = require('tape')
-const namehash = require('../')
+const namehash = require('../dist')
 
 // Test results specified in original ENS Proposal:
 // https://github.com/ethereum/EIPs/issues/137
@@ -47,8 +47,23 @@ test('normalize ascii domain', (t) => {
 test('normalize international domain', (t) => {
   t.plan(1)
   const input = 'fоо.eth' // with cyrillic 'o'
-  const expected = 'xn--f-1tba.eth'
+  const expected = 'fоо.eth'
   const output = namehash.normalize(input)
   t.equal(output, expected)
 })
 
+test('normalize capitalized domain', (t) => {
+  t.plan(1)
+  const input = 'Foo.eth' // latin chars only
+  const expected = 'foo.eth'
+  const output = namehash.normalize(input)
+  t.equal(output, expected)
+})
+
+test('normalize emoji domain', (t) => {
+  t.plan(1)
+  const input = '🦚.eth'
+  const expected = '🦚.eth'
+  const output = namehash.normalize(input)
+  t.equal(output, expected)
+})

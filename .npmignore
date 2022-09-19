@@ -1,0 +1,7 @@
+node_modules/
+test/
+.gitignore
+circle.yml
+index.js
+rollup.config.js
+yarn.lock
