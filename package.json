@@ -1,35 +1,39 @@
 {
   "name": "@ensdomains/eth-ens-namehash",
-  "version": "2.0.15",
-  "description": "A simple module for generating ENS namehashes per spec https://github.com/ethereum/EIPs/issues/137",
-  "main": "dist/index.js",
-  "scripts": {
-    "bundle": "rollup --config rollup.config.js",
-    "test": "node test"
-  },
+  "version": "3.0.0",
+  "description": "Ethereum Name Service (ENS) Name Normalizer",
+  "keywords": [
+    "ENS",
+    "Ethereum",
+    "UTS-46",
+    "UTS-51",
+    "IDNA",
+    "Normalize",
+    "NFC",
+    "NFD"
+  ],
+  "type": "module",
+  "main": "src/index.js",
+  "files": [
+    "./src"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/ensdomains/eth-ens-namehash.git"
   },
-  "keywords": [
-    "Ethereum",
-    "ENS"
-  ],
-  "author": "Dan Finlay <dan@danfinlay.com>",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/ensdomains/eth-ens-namehash/issues"
   },
   "homepage": "https://github.com/ensdomains/eth-ens-namehash#readme",
-  "devDependencies": {
-    "@rollup/plugin-commonjs": "^20.0.0",
-    "@rollup/plugin-node-resolve": "^13.0.5",
-    "idna-uts46-hx": "^3.4.0",
-    "js-sha3": "^0.5.7",
-    "rollup": "^2.57.0",
-    "tape": "^4.6.3"
+  "author": "raffy.eth",
+  "scripts": {
+    "derive": "node derive/make.js",
+    "make": "node src/make.js",
+    "validate": "node validate/make.js",
+    "test": "node test/validate.js"
   },
-  "directories": {
-    "test": "test"
+  "dependencies": {
+    "js-sha3": "^0.8.0"
   }
 }
