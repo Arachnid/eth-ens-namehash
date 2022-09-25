@@ -37,19 +37,17 @@ interface StopToken {
 }
 type Token = TextToken | EmojiToken | NFCToken | StopToken;
 
-export default interface ENSNormalize {
-	hash(name: string): string;
-	normhash(name: string): string;
-	labelhash(label: string): string;
+export function hash(name: string): string;
+export function normhash(name: string): string;
+export function labelhash(label: string): string;
 
-	normalize(name: string): string;
-	beautify(name: string): string;
-	tokenize(name: string): Token[];
-	getEmoji(): number[][];
+export function normalize(name: string): string;
+export function beautify(name: string): string;
+export function tokenize(name: string): Token[];
+export function emojis(): number[][];
 
-	normalizeFragment(frag: string): string;
-	normalizeFragmentPostCheck(norm: string): string;
-	
-	nfd(cps: number[]): number[];
-	nfc(cps: number[]): number[];
-};
+export function normalizeFragment(frag: string): string;
+export function normalizePostCheck(norm: string): string;
+
+export function nfd(cps: number[]): number[];
+export function nfc(cps: number[]): number[];

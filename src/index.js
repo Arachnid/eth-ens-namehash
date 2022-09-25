@@ -1,30 +1,35 @@
 import {
-	ens_normalize, 
-	ens_beautify, 
-	ens_tokenize, 
-	ens_emoji, 
-	ens_normalize_fragment, 
-	ens_normalize_post_check
+	ens_normalize as normalize, 
+	ens_beautify as beautify, 
+	ens_tokenize as tokenize, 
+	ens_emoji as emojis, 
+	ens_normalize_fragment as normalizeFragment, 
+	ens_normalize_post_check as normalizePostCheck,
+	nfc, nfd
 } from './lib.js';
 
-import {nfc, nfd} from './nf.js';
-
-import {labelhash, namehash} from './keccak.js';
+import {labelhash, namehash} from './hash.js';
 
 function normhash(s) {
-	return namehash(ens_normalize(s));
+	return hash(normalize(s));
 }
 
-export default {
-	hash: namehash,
-	labelhash,
-	normhash,
-	normalize: ens_normalize,
-	beautify: ens_beautify,
-	tokenize: ens_tokenize,
-	emojis: ens_emoji,
-	normalizeFragment: ens_normalize_fragment,
-	normalizeFragmentPostCheck: ens_normalize_post_check,	
-	nfc,
-	nfd
+export {
+	namehash as hash,
+	namehash, labelhash, normhash,
+	normalize, beautify, tokenize, emojis,
+	normalizeFragment, normalizePostCheck,	
+	nfd, nfc,
 };
+
+/*
+// this is a better idiom?
+// `import * as f from ...`
+export default {
+	hash: namehash, 
+	namehash, labelhash, normhash,
+	normalize, beautify, tokenize, emojis,
+	normalizeFragment, normalizePostCheck,	
+	nfd, nfc,
+};
+*/

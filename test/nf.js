@@ -22,5 +22,6 @@ function run_tests(nfd, nfc) {
 	return errors;
 }
 
-// test custom (must pass)
-if (run_tests(nfd_custom, nfc_custom).length) throw new Error('custom');
+if (run_tests(nfd_custom, nfc_custom).length) {
+	throw new Error('validation');
+}

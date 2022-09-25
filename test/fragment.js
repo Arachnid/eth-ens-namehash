@@ -1,9 +1,16 @@
-import lib from '../src/index.js';
+import {normalize, normalizeFragment, nfd} from '../src/index.js';
 
 // naive implementation
 function name_contains_fragment(name, frag) {
+	// convert the name to NFD because:
+	//   è = E8 => 65 300
+	// note that:
+	//   name_contains_fragment("è", "e") => true
+	//   name_contains_fragment("è", String.fromCodePoint(300)) => true
+	// if instead, you want exact codepoint matching: 
+	//   use normalizeFragment() without the nfd argument (which defaults to nfc)
 	try {
-		return lib.normalizeFragment(name).normalize('NFD').includes(lib.normalizeFragment(frag).normalize('NFD'));
+		return normalizeFragment(name, nfd).includes(normalizeFragment(frag, nfd));
 	} catch (ignored) {
 	}
 }
@@ -14,13 +21,13 @@ test('e\u{303}', '\u{303}'); // error: leading combining mark
 
 function test(name, frag) {
 	try {
-		lib.normalize(name);
+		normalize(name);
 	} catch (err) {
 		throw new Error(`expected name should normalize: ${name}`);
 	}
 	ok: {
 		try {
-			lib.normalize(frag);
+			normalize(frag);
 		} catch (err) {		
 			break ok;
 		}

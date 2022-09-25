@@ -1,47 +1,34 @@
-# Todo
+# eth-ens-namehash
 
-* Decided Top-level API Names
-	* Current export is: `{hash, normalize}`
-		* ✅`hash(name: string): string<0x+64hex>`
-		* ✅`normalize(name: string): string`
-	* [@adraffy/ens_normalize](https://github.com/adraffy/eth-ens-namehash)
-		* ✅`labelhash(name: string): string`
-		* ✅`normhash(name: string): string`
-		* ✅`ens_normalize(name: string): string` &rarr; `normalize()`
-		* ✅`ens_beautify(name: string): string` &rarr; `beautify()`
-		* ✅`ens_tokenize(name: string): Token[]` &rarr; `tokenize()`
-		* ✅`ens_emoji(): number[][]` &rarr; `emojis()`
-		* ✅`ens_normalize_fragment(frag: string): string`  &rarr; `normalizeFragment()`
-		* `ens_normalize_post_check(norm: string): string`  &rarr; `normalizeFragmentPostCheck()`
-		* ✅ `nfd(cps: number[]): number[]`
-		* ✅ `nfc(cps: number[]): number[]`
-* ~~Decide Data Location~~ Included Directly in `/derive/`
-* Other Notes:
-	* `js-sha3` shouldn't be a dev-dependancy
-	* ~~How do I link to the ENSIP?~~
-
----
-
-# eth-ens-namehash.js
-
-[Ethereum Name Service](https://ens.domains/) (ENS) Name Normalizer.
+[Ethereum Name Service](https://ens.domains/) (ENS) name normalizer and hasher.
 
 * Follows [ENS Name Normalization Standard](https://github.com/adraffy/ensip-norm/blob/main/draft.md)
 * Passes **100%** Validation Tests
-* Custom [`NFC`](https://unicode.org/reports/tr15/) Implementation (or use native)
-	* Passes **100%** Unicode `15.0.0` [Normalization Tests](https://www.unicode.org/Public/15.0.0/ucd/NormalizationTest.txt)
-* Unminified File Size: `44KB`
+* Passes **100%** Unicode `15.0.0` [Normalization Tests](https://www.unicode.org/Public/15.0.0/ucd/NormalizationTest.txt)
+* [Available on NPM](https://www.npmjs.com/package/@ensdomains/eth-ens-namehash)
+
+## Installation
+
+`npm install @ensdomains/eth-ens-namehash -S`
+
+## Usage Examples
 
 ```Javascript
-import {normalize} from '@ensdomains/eth-ens-namehash';
+import {normalize, namehash} from '@ensdomains/eth-ens-namehash';
 
+// [normalize a name]
 // string -> string
-// throws on invalid names
+// throws on invalid names, empty labels
 // output ready for namehash
-let normalized = normalize('RaFFY🚴‍♂️.eTh');
-// "raffy🚴‍♂.eth"
-
 // note: does not enforce .eth TLD 3-character minimum
+let normalized = normalize('👨️‍💻nIcK.EtH');
+// "👨‍💻nick.eth"
+
+// [compute the hash of a name]
+// string -> 0x-prefixed 64-char hex uint256
+let node = namehash(normalized);
+// "0x6d3ff59a43ac0182b379d3213c30db92d385fbfc34cd77bf66012bf117445848"
+// namehash(normalized(x)) == normhash(x)
 ```
 Format names with fully-qualified emoji:
 ```JavaScript
@@ -49,26 +36,26 @@ Format names with fully-qualified emoji:
 // output ready for display
 let pretty = beautify('1⃣2⃣.eth'); 
 // "1️⃣2️⃣.eth"
-
 // note: normalization is unchanged:
 // ens_normalize(ens_beautify(x)) == ens_normalize(x)
 ```
 
-Normalize name fragments:
+Normalize name fragments for [substring search](./test/fragment.js):
 ```Javascript
-// these fragments fail ens_normalize() due to ens_normalize_post_check() rules
-// but will normalize fine as fragments
+// these fragments fail normalize() due to positional-rules
+// but will normalize correctly as fragments
 let frag1 = normalizeFragment('AB--');
 let frag2 = normalizeFragment('\u{303}');
 
-// structural logic is delayed until Post-check:
-let norm_gTLD = normalizeFragmentPostCheck('eth');
+// positional logic is delayed until Post-check:
+let norm_gTLD = normalizePostCheck('eth');
 ```
 
 Instead of exposing an IDNA-like API (`is_valid()`, `get_mapped()`, etc.), this library exposes a single function which converts names to tokens:
 ```JavaScript
 // string -> Token[]
-let tokens = tokenize('_R💩\u{FE0F}a\u{FE0F}\u{304}\u{AD}./'); // never throws
+// never throws
+let tokens = tokenize('_R💩\u{FE0F}a\u{FE0F}\u{304}\u{AD}./');
 // [
 //     { type: 'isolated', cp: 95 }, // valid w/restrictions
 //     {                             // (eg. no combining marks)
@@ -110,6 +97,7 @@ console.log(emojis());
 // ]
 ```
 
+
 ## Build
 
 * `git clone` this repo, then `npm install` 
@@ -126,43 +114,3 @@ console.log(emojis());
 		* [tests.json](./validate/tests.json)
 * `npm run test` — perform validation tests
 * `npm run build` — create `/dist/`
-
----
-
-# Eth ENS Namehash
-
-A javascript library for generating Ethereum Name Service (ENS) namehashes per [spec](https://github.com/ethereum/EIPs/issues/137).
-
-[Available on NPM](https://www.npmjs.com/package/@ensdomains/eth-ens-namehash)
-
-## Installation
-
-`npm install @ensdomains/eth-ens-namehash -S`
-
-## Usage
-
-```javascript
-var namehash = require('@ensdomains/eth-ens-namehash')
-var hash = namehash.hash('foo.eth')
-// '0xde9b09fd7c5f901e23a3f19fecc54828e9c848539801e86591bd9801b019f84f'
-
-// Also supports normalizing strings to ENS compatibility:
-var input = getUserInput()
-var normalized = namehash.normalize(input)
-```
-
-## Security Warning
-
-ENS Supports UTF-8 characters, and so many duplicate names are possible. For example:
-
-- faceboоk.eth
-- facebook.eth
-
-The first one has non-ascii chars. (control+F on this page and search for facebook, only the second one will match).
-
-namehash.normalize() doesn't automagically remap those, and so other precautions should be taken to avoid user phishing.
-
-## Development
-
-This module supports advanced JavaScript syntax, but exports an ES5-compatible module. To re-build the exported module after making changes, run `npm run bundle` (must have [browserify](http://browserify.org/) installed).
-

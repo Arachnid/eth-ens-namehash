@@ -1,5 +1,5 @@
 import {readFileSync} from 'node:fs';
-import lib from '../src/index.js';
+import {normalize, tokenize, normalizePostCheck} from '../src/index.js';
 
 const TESTS = JSON.parse(readFileSync(new URL('../validate/tests.json', import.meta.url)));
 
@@ -26,7 +26,7 @@ function run_tests(fn) {
 
 // proof of concept
 function normalize_via_tokenize(name) {
-	return lib.normalizeFragmentPostCheck(lib.tokenize(name).flatMap(token => {
+	return normalizePostCheck(tokenize(name).flatMap(token => {
 		switch (token.type) {
 			case 'disallowed': throw new Error('disallowed'); 
 			case 'ignored': return '';
@@ -37,7 +37,7 @@ function normalize_via_tokenize(name) {
 	}).join(''));
 }
 
-test(lib.normalize);
+test(normalize);
 test(normalize_via_tokenize);
 console.log('OK');
 
