@@ -25,3 +25,5 @@ function run_tests(nfd, nfc) {
 if (run_tests(nfd_custom, nfc_custom).length) {
 	throw new Error('validation');
 }
+
+console.log('PASS nf');

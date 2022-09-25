@@ -88,7 +88,7 @@ let tokens = tokenize('_R💩\u{FE0F}a\u{FE0F}\u{304}\u{AD}./');
 Generates an array of supported emoji codepoints:
 ```Javascript
 // () -> number[][]
-console.log(emojis());
+console.log(supportedEmojis());
 // [
 //     [ 2764 ],
 //     [ 128169, 65039 ],
@@ -113,4 +113,4 @@ console.log(emojis());
 	* `npm run validate`
 		* [tests.json](./validate/tests.json)
 * `npm run test` — perform validation tests
-* `npm run build` — create `/dist/`
+* `npm run rebuild` — run all the commands above

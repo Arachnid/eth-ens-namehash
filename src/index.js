@@ -2,7 +2,7 @@ import {
 	ens_normalize as normalize, 
 	ens_beautify as beautify, 
 	ens_tokenize as tokenize, 
-	ens_emoji as emojis, 
+	ens_emoji as supportedEmojis, 
 	ens_normalize_fragment as normalizeFragment, 
 	ens_normalize_post_check as normalizePostCheck,
 	nfc, nfd
@@ -17,7 +17,7 @@ function normhash(s) {
 export {
 	namehash as hash,
 	namehash, labelhash, normhash,
-	normalize, beautify, tokenize, emojis,
+	normalize, beautify, tokenize, supportedEmojis,
 	normalizeFragment, normalizePostCheck,	
 	nfd, nfc,
 };
@@ -28,7 +28,7 @@ export {
 export default {
 	hash: namehash, 
 	namehash, labelhash, normhash,
-	normalize, beautify, tokenize, emojis,
+	normalize, beautify, tokenize, supportedEmojis,
 	normalizeFragment, normalizePostCheck,	
 	nfd, nfc,
 };

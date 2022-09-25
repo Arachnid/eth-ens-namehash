@@ -39,7 +39,6 @@ function normalize_via_tokenize(name) {
 
 test(normalize);
 test(normalize_via_tokenize);
-console.log('OK');
 
 function test(fn) {
 	let errors = run_tests(fn);

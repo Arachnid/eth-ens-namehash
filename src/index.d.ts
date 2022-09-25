@@ -44,7 +44,7 @@ export function labelhash(label: string): string;
 export function normalize(name: string): string;
 export function beautify(name: string): string;
 export function tokenize(name: string): Token[];
-export function emojis(): number[][];
+export function supportedEmojis(): number[][];
 
 export function normalizeFragment(frag: string): string;
 export function normalizePostCheck(norm: string): string;
