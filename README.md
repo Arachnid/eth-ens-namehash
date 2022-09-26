@@ -28,16 +28,16 @@ let normalized = normalize('👨️‍💻nIcK.EtH');
 // string -> 0x-prefixed 64-char hex uint256
 let node = namehash(normalized);
 // "0x6d3ff59a43ac0182b379d3213c30db92d385fbfc34cd77bf66012bf117445848"
-// namehash(normalized(x)) == normhash(x)
+// namehash(normalize(x)) == normhash(x)
 ```
 Format names with fully-qualified emoji:
 ```JavaScript
-// works like ens_normalize
+// works like normalize()
 // output ready for display
 let pretty = beautify('1⃣2⃣.eth'); 
 // "1️⃣2️⃣.eth"
 // note: normalization is unchanged:
-// ens_normalize(ens_beautify(x)) == ens_normalize(x)
+// normalize(beautify(x)) == normalize(x)
 ```
 
 Normalize name fragments for [substring search](./test/fragment.js):
@@ -96,7 +96,6 @@ console.log(supportedEmojis());
 //     ...
 // ]
 ```
-
 
 ## Build
 
