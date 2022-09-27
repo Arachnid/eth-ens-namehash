@@ -1,6 +1,6 @@
 {
   "name": "@ensdomains/eth-ens-namehash",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Ethereum Name Service (ENS) Name Normalizer",
   "keywords": [
     "ENS",

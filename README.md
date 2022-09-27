@@ -9,7 +9,7 @@
 
 ## Installation
 
-`npm install @ensdomains/eth-ens-namehash -S`
+`npm install @ensdomains/eth-ens-namehash --save`
 
 ## Usage Examples
 

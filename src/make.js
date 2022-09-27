@@ -2,14 +2,14 @@ import {Encoder, unsafe_btoa} from './encoder.js';
 import {readFileSync, writeFileSync} from 'node:fs';
 
 let data_dir = new URL('../derive/output/', import.meta.url);
-let {valid, mapped, ignored, cm, isolated, emoji, scripts, wholes} = JSON.parse(readFileSync(new URL('./spec.json', data_dir)));
+let {valid, mapped, ignored, cm, isolated, emoji, scripts, wholes, excluded} = JSON.parse(readFileSync(new URL('./spec.json', data_dir)));
 let {ranks, decomp, exclusions, qc} = JSON.parse(readFileSync(new URL('./nf.json', data_dir)));
 
 let emoji_solo = emoji.filter(v => v.length == 1);
 let emoji_seqs = emoji.filter(v => v.length >= 2);
 
 // union of non-zero combining class + nfc_qc
-let nfc_check = [...new Set([ranks, qc].flat(Infinity))];
+let nfc_check = [...new Set([ranks, qc].flat(Infinity))].filter(cp => valid.includes(cp));
 
 class Node {
 	constructor() {
@@ -174,18 +174,25 @@ enc.write_mapped([
 //	[3, 1, 0],
 //	[4, 1, 0],
 ], mapped); //.map(kv => [kv[0], kv[1].map(x => sorted_valid_map[x])])); // not worth it
-enc.write_member(cm.map(cp => sorted_valid_map[cp]));
-enc.write_member(isolated.map(cp => sorted_valid_map[cp]));
-enc.write_member(scripts.Latn.map(cp => sorted_valid_map[cp]));
-enc.write_member(scripts.Grek.map(cp => sorted_valid_map[cp]));
- enc.write_member(wholes.Grek.map(cp => sorted_valid_map[cp]));
-enc.write_member(scripts.Cyrl.map(cp => sorted_valid_map[cp]));
- enc.write_member(wholes.Cyrl.map(cp => sorted_valid_map[cp]));
+function write_valid_sorted(cps) {
+	enc.write_member(cps.map(cp => sorted_valid_map[cp]));
+}
+write_valid_sorted(cm);
+write_valid_sorted(isolated);
+write_valid_sorted(scripts.Latn);
+write_valid_sorted(scripts.Grek);
+write_valid_sorted(wholes.Grek);
+write_valid_sorted(scripts.Cyrl);
+write_valid_sorted(wholes.Cyrl);
+for (let cps of Object.values(excluded)) {
+	write_valid_sorted(cps);
+}
+enc.write_member([]);
 enc.write_member(emoji_solo.map(v => v[0]));
 enc.write_member(sorted_emoji);
 encode_emoji(enc, root, sorted_emoji_map);
 //write('include-only'); // only saves 300 bytes
-enc.write_member(nfc_check.flatMap(cp => sorted_valid_map[cp] ?? []));
+write_valid_sorted(nfc_check);
 write('include-ens');
 
 // just nf 
