@@ -11,7 +11,7 @@ import {
 import {labelhash, namehash} from './hash.js';
 
 function normhash(s) {
-	return hash(normalize(s));
+	return namehash(normalize(s));
 }
 
 export {
