@@ -99,9 +99,6 @@ function register_emoji(info) {
 }
 
 function set_isolated(cp) {
-	if (!valid.has(cp)) {
-		throw new Error(`Isolated not Valid: ${UNICODE.format(cp)}`);
-	}
 	if (isolated.has(cp)) {
 		throw new Error(`Already Isolated: ${UNICODE.format(cp)}`);
 	}
@@ -117,6 +114,11 @@ emoji_seqs.Emoji_Keycap_Sequence.forEach(register_emoji);
 emoji_seqs.RGI_Emoji_Tag_Sequence.forEach(register_emoji);
 emoji_seqs.RGI_Emoji_Modifier_Sequence.forEach(register_emoji);
 
+// derive flag sequences with valid regions
+// warning: this contains EZ and QO
+// UNICODE.valid_emoji_flag_sequences().forEach(register_emoji);
+emoji_seqs.RGI_Emoji_Flag_Sequence.forEach(register_emoji); // use this instead
+
 let emoji_chrs = UNICODE.emoji_data();
 let emoji_map = new Map(emoji_chrs.Emoji.map(x => [x.cp, x]));
 let emoji_demoted = new Set((await import('./rules/emoji-demoted.js')).default);
@@ -129,22 +131,31 @@ for (let rec of emoji_map.values()) {
 	}
 }
 
-// flag sequences with valid regions
-UNICODE.valid_emoji_flag_sequences().forEach(register_emoji);
 // disable single regionals
 for (let cp of Regional_Indicator) {
 	emoji_map.get(cp).used = true;
 }
 
+// register forced FE0F
+for (let info of emoji_seqs.Basic_Emoji) {
+	if (info.cps.length == 2 && info.cps[1] == 0xFE0F) { // X + FE0F
+		let rec = emoji_map.get(info.cps[0]);
+		if (!rec) throw new Error(`Expected emoji: ${UNICODE.format(info)}`);	
+		if (rec.used) continue;
+		rec.used = true;
+		register_emoji(info);
+	}
+}
+
 // register default emoji-presentation
 for (let info of emoji_chrs.Emoji_Presentation) {
-	if (Regional_Indicator.has(info.cp)) continue; // skipped
 	let rec = emoji_map.get(info.cp);
-	if (!rec) throw new Error(`Expected emoji: ${UNICODE.format(info)}`);
+	if (!rec) throw new Error(`Expected emoji: ${UNICODE.format(info)}`);	
 	if (rec.used) continue;
 	rec.used = true;
 	register_emoji({cps: [info.cp, 0xFE0F], ...info});
 }
+
 // register default text-presentation (leftovers)
 for (let info of emoji_map.values()) {
 	if (!info.used) {	
@@ -262,12 +273,13 @@ for (let info of emoji.values()) {
 		throw new Error(`Emoji with non-zero combining class boundary: ${UNICODE.format(info)}`);
 	}
 }
-for (let cp of isolated) {
+for (let cp of isolated) {	
+	if (!valid.has(cp)) {
+		isolated.delete(cp);
+		console.log(`*** Isolated not Valid: ${UNICODE.format(cp)}`); // non fatal
+	}
 	if (cc.has(cp)) {
 		throw new Error(`Isolated with non-zero combining class: ${UNICODE.format(cp)}`);
-	}
-	if (!valid.has(cp)) {
-		throw new Error(`Isolated not Valid: ${UNICODE.format(cp)}`);
 	}
 }
 
@@ -275,14 +287,13 @@ function sorted(v) {
 	return [...v].sort((a, b) => a - b);
 }
 
-
 // load excluded scripts
 let excluded = {};
 for (let abbr of SCRIPTS.excluded()) {	
 	let set  = scripts[abbr];
 	if (!set) throw new TypeError(`Expected script: ${abbr}`);
 	if (set.size == 0) continue;	
-	let decomposed = new Set(NF.nfd([...set]));
+	let decomposed = new Set(NF.nfd([...set])); // this is a good idea IMO
 	for (let cp of decomposed) {
 		if (!set.has(cp)) {
 			throw new Error(`Excluded script "${a}" decomposition: ${SPEC.format(cp)}`);
@@ -291,6 +302,7 @@ for (let abbr of SCRIPTS.excluded()) {
 	excluded[abbr] = sorted(decomposed);
 	console.log(`Excluded Script: ${abbr} (${decomposed.size})`);
 }
+
 
 // wholes
 let wholes_Grek = (await import('./rules/confusables-Grek.js')).default.filter(cp => valid.has(cp));
@@ -308,18 +320,20 @@ writeFileSync(new URL('./spec.json', out_dir), JSON.stringify({
 	cm: sorted(cm),
 	emoji: [...emoji.values()].map(x => x.cps).sort(compare_arrays),
 	isolated: sorted(isolated),
+	excluded,	
+	// TODO: generalize wholes+scripts to [Latn, Grek, Cryl]
 	scripts: {
 		Latn: sorted(scripts.Latn),
 		Grek: sorted(scripts.Grek),
 		Cyrl: sorted(scripts.Cyrl),
 	}, 
-	excluded,
 	wholes: {
 		Grek: sorted(wholes_Grek),
 		Cyrl: sorted(wholes_Cyrl),
 	}
 }));
 
+// this file should be independent so we can create a standalone nf implementation
 writeFileSync(new URL('./nf.json', out_dir), JSON.stringify({
 	created,
 	unicode: UNICODE.version_str,
@@ -330,8 +344,7 @@ writeFileSync(new URL('./nf.json', out_dir), JSON.stringify({
 }));
 writeFileSync(new URL('./nf-tests.json', out_dir), JSON.stringify(UNICODE.nf_tests()));
 
-// not important
-// convenience file for emoji.html
+// convenience file for emoji.html (not critical)
 writeFileSync(new URL('./emoji-info.json', out_dir), JSON.stringify([...emoji.values()].map(info => {
 	let {cps, name, version, type} = info;
 	return {form: String.fromCodePoint(...cps), name, version, type};
