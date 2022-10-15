@@ -9,11 +9,11 @@ export function parse_version(s) {
 	};
 }
 
-export function version_ordinal(x, base = 100) {
+export function version_ordinal(x) {
 	if (typeof x !== 'object') {
 		x = parse_version(x);
-	} 
-	return x.major*base*base + x.minor*base + x.patch;
+	}
+	return x.major + (1 - 1/(1 + x.minor + (1 - 1/(1 + x.patch)))); // use continued fraction expansion
 }
 
 export function hex_cp(cp) {
@@ -24,10 +24,16 @@ export function hex_seq(cps) {
 	return `[${cps.map(hex_cp).join(' ')}]`;
 }
 
-// str to cps
-export function explode_cp(s) {
-	if (typeof s != 'string') throw new TypeError(`expected string`);	
-	return [...s].map(c => c.codePointAt(0));
+export function explode_cp(x) {
+	if (typeof x === 'string') {
+		return [...x].map(c => c.codePointAt(0));
+	} else if (Number.isInteger(x)) {
+		return [x];
+	} else if (Array.isArray(x)) {
+		return x;
+	} else {
+		throw new TypeError('expected codepoint coercible');
+	}
 }
 
 // hex to dec
@@ -66,4 +72,15 @@ export function compare_arrays(a, b) {
 	let c = n - b.length;
 	for (let i = 0; c == 0 && i < n; i++) c = a[i] - b[i];
 	return c;
+}
+
+// https://stackoverflow.com/a/47593316 is bugged, seed (a) doesn't wrap
+// https://gist.github.com/tommyettinger/46a874533244883189143505d203312c
+export function mulberry32(a) {
+	return () => {
+		let t = a = a + 0x6D2B79F5|0;
+		t = Math.imul(t ^ t >>> 15, t | 1);
+		t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+		return ((t ^ (t >>> 14)) >>> 0) / 0x100000000;
+	}
 }

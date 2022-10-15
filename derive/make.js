@@ -1,6 +1,7 @@
 import {mkdirSync, writeFileSync, createWriteStream} from 'node:fs';
 import {compare_arrays, parse_cp_sequence} from './utils.js';
-import {UNICODE, NF, IDNA, SCRIPTS} from './unicode-version.js';
+import {UNICODE, NF, IDNA, SCRIPTS, SCRIPT_ORDER} from './unicode-version.js';
+import {read_wholes} from './wholes.js';
 
 import CHARS_VALID from './rules/chars-valid.js';
 import CHARS_DISALLOWED from './rules/chars-disallow.js';
@@ -40,8 +41,6 @@ assert_distinct({
 	MAPPED: CHARS_MAPPED.map(x => x[0])
 });
 
-// missing data
-const Regional_Indicator = new Set(UNICODE.regional_indicators());
 
 console.log(`Build Date: ${new Date().toJSON()}`);
 console.log(`Unicode Version: ${UNICODE.version_str}`);
@@ -117,24 +116,62 @@ emoji_seqs.RGI_Emoji_Modifier_Sequence.forEach(register_emoji);
 // derive flag sequences with valid regions
 // warning: this contains EZ and QO
 // UNICODE.valid_emoji_flag_sequences().forEach(register_emoji);
-emoji_seqs.RGI_Emoji_Flag_Sequence.forEach(register_emoji); // use this instead
+// use the following instead
+emoji_seqs.RGI_Emoji_Flag_Sequence.forEach(register_emoji);
+
+let emoji_disabled = [];
 
 let emoji_chrs = UNICODE.emoji_data();
 let emoji_map = new Map(emoji_chrs.Emoji.map(x => [x.cp, x]));
+
+// names suck: old, ucd, emoji (incomplete)
+/*
+// modernize names
+for (let info of emoji_seqs.Basic_Emoji) {
+	let rec = emoji_map.get(info.cps[0]);
+	if (!rec) throw new Error(`Expected emoji: ${UNICODE.format(info)}`);
+	if (rec.name.localeCompare(info.name, 'en', {sensitivity: 'base'})) {
+		rec.name = `${rec.name} (${info.name})`;
+	}
+}
+*/
+
+// demote mapped emoji
 let emoji_demoted = new Set((await import('./rules/emoji-demoted.js')).default);
 for (let rec of emoji_map.values()) {
 	if (emoji_demoted.has(rec.cp)) {
 		rec.used = true;
+		emoji_disabled.push(rec);
 		console.log(`Demoted Emoji: ${UNICODE.format(rec)}`);
 	} else {
-		disallow_char(rec.cp, true);
+		disallow_char(rec.cp, true); // quiet because there are a lot of these
 	}
 }
 
 // disable single regionals
-for (let cp of Regional_Indicator) {
-	emoji_map.get(cp).used = true;
+for (let cp of UNICODE.regional_indicators()) {
+	let rec = emoji_map.get(cp);
+	rec.used = true;
+	emoji_disabled.push(rec);
+	console.log(`Disabled Emoji: ${rec}`);
 }
+
+// disable skin modifiers
+for (let info of UNICODE.emoji_skin_colors()) {
+	emoji_map.get(info.cp).used = true;
+	emoji_disabled.push(info);
+	console.log(`Disabled Emoji: ${info}`);
+}
+
+// disable hair modifiers
+// 20221004: these don't seem to function the same as skin
+/* 
+for (let info of UNICODE.emoji_hair_colors()) {
+	emoji_map.get(info.cp).used = true;
+	emoji_disabled.push(info);
+	console.log(`Disabled Emoji: ${info}`);
+}
+*/
 
 // register forced FE0F
 for (let info of emoji_seqs.Basic_Emoji) {
@@ -171,10 +208,11 @@ for (let seq of (await import('./rules/emoji-seq-blacklist.js')).default) {
 	let key = String.fromCodePoint(...cps);
 	let info = emoji.get(key);
 	if (!info) {
-		console.log(`*** Blacklist Emoji: No match for ${UNICODE.format(cps)}`); // should this be fatal?
-		continue;
+		console.log(`*** Blacklist Emoji: No match for ${UNICODE.format(cps)}`); // should this be fatal? (yes)
+		throw new Error('blacklist');
 	}
 	console.log(`Blacklist Emoji by Sequence: ${UNICODE.format(info)}`);
+	emoji_disabled.push(info);
 	emoji.delete(key);
 }
 for (let [x, ys] of CHARS_MAPPED) {
@@ -208,21 +246,24 @@ for (let info of emoji_chrs.Extended_Pictographic) {
 }
 
 // filter combining marks
-let cm = new Set(UNICODE.general_category('M').filter(x => valid.has(x.cp)).map(x => x.cp));
+let cm = new Set([...UNICODE.cm].filter(cp => valid.has(cp)));
 
-// load scripts
-let scripts = Object.fromEntries(SCRIPTS.entries.map(x => {
-	return [x.abbr, new Set([...x.set].filter(cp => valid.has(cp)))];
-}));
-
-// apply changes
-for (let cp of (await import('./rules/scripts.js')).default) {
-	for (let [abbr0, set] of Object.entries(scripts)) {
-		if (set.delete(cp)) {
-			const abbr1 = 'Zyyy'; // TODO: generalize this
-			scripts[abbr1].add(cp);
-			console.log(`Changed Script [${abbr0} => ${abbr1}]: ${UNICODE.format(cp)}`);
-			break;
+// apply script changes
+for (let cp of (await import('./rules/chars-common.js')).default) {
+	let old = SCRIPTS.get_script_set(cp);
+	for (let abbr of old) {
+		SCRIPTS.require(abbr).set.delete(cp);
+	}
+	const relaxed = 'Zyyy';
+	SCRIPTS.require(relaxed).set.add(cp);
+	console.log(`Relaxed Script [${[...old].join('/')} => ${relaxed}]: ${UNICODE.format(cp)}`);
+}
+	
+// filter scripts
+for (let {set} of SCRIPTS.entries) {
+	for (let cp of set) {
+		if (!valid.has(cp)) {
+			set.delete(cp); 
 		}
 	}
 }
@@ -283,30 +324,72 @@ for (let cp of isolated) {
 	}
 }
 
+// make every disabled emoji a solo-sequence (not critical)
+for (let info of emoji_disabled) {
+	if (!info.cps) info.cps = [info.cp];
+	info.type = 'Disabled';
+}
+
 function sorted(v) {
 	return [...v].sort((a, b) => a - b);
 }
 
-// load excluded scripts
-let excluded = {};
-for (let abbr of SCRIPTS.excluded()) {	
-	let set  = scripts[abbr];
-	if (!set) throw new TypeError(`Expected script: ${abbr}`);
-	if (set.size == 0) continue;	
-	let decomposed = new Set(NF.nfd([...set])); // this is a good idea IMO
-	for (let cp of decomposed) {
-		if (!set.has(cp)) {
-			throw new Error(`Excluded script "${a}" decomposition: ${SPEC.format(cp)}`);
+// load restricted scripts
+let restricted = new Set();
+// https://www.unicode.org/reports/tr31/#Table_Candidate_Characters_for_Exclusion_from_Identifiers
+for (let abbr of SCRIPTS.excluded()) {
+	restricted.add(abbr);
+}
+// https://www.unicode.org/reports/tr31/#Table_Limited_Use_Scripts
+for (let abbr of SCRIPTS.limited()) {
+	restricted.add(abbr);
+}
+// additional restricted scripts
+for (let abbr of (await import('./rules/restricted-scripts.js')).default) {
+	restricted.add(abbr);
+}
+// require existance, remove empty
+restricted = [...restricted].map(abbr => SCRIPTS.require(abbr)).filter(x => x.set.size);
+// require decomposed sanity
+for (let script of restricted) {	
+	let set = new Set(NF.nfd([...script.set])); // this is a good idea IMO
+	for (let cp of set) {
+		if (!script.set.has(cp)) {
+			throw new Error(`Restricted script ${script.abbr} decomposition: ${UNICODE.format(cp)}`);
 		}
 	}
-	excluded[abbr] = sorted(decomposed);
-	console.log(`Excluded Script: ${abbr} (${decomposed.size})`);
+	script.restricted = set;
+}
+// remove unrestricted from restricted
+let unrestricted_union = new Set(SCRIPTS.entries.flatMap(x => x.restricted ? [] : NF.nfd([...x.set]))); // see above
+for (let script of restricted) {
+	for (let cp of unrestricted_union) {
+		script.restricted.delete(cp);
+	}
+}
+restricted = restricted.filter(x => x.restricted.size); // remove empty
+for (let script of restricted) {
+	console.log(`Restricted [${script.abbr}]: ${script.set.size} => ${script.restricted.size}`);
 }
 
-
 // wholes
-let wholes_Grek = (await import('./rules/confusables-Grek.js')).default.filter(cp => valid.has(cp));
-let wholes_Cyrl = (await import('./rules/confusables-Cyrl.js')).default.filter(cp => valid.has(cp));
+let wholes = await read_wholes(SCRIPTS);
+for (let script of wholes) {
+	console.log(`Wholes [${script.abbr}]: ${script.wholes.size}`);
+}
+// since restricted scripts cant intersect
+// all the wholes can be unioned together
+let restricted_wholes = new Set();
+for (let {wholes} of restricted) {
+	if (wholes) {
+		for (let cp of wholes) {
+			restricted_wholes.add(cp);
+		}
+		wholes.clear();
+	} 
+}
+console.log(`Restricted Wholes: ${restricted_wholes.size}`);
+wholes = wholes.filter(x => x.wholes.size); // remove restricted
 
 // note: sorting isn't important, just nice to have
 const created = new Date();
@@ -320,17 +403,12 @@ writeFileSync(new URL('./spec.json', out_dir), JSON.stringify({
 	cm: sorted(cm),
 	emoji: [...emoji.values()].map(x => x.cps).sort(compare_arrays),
 	isolated: sorted(isolated),
-	excluded,	
-	// TODO: generalize wholes+scripts to [Latn, Grek, Cryl]
-	scripts: {
-		Latn: sorted(scripts.Latn),
-		Grek: sorted(scripts.Grek),
-		Cyrl: sorted(scripts.Cyrl),
-	}, 
-	wholes: {
-		Grek: sorted(wholes_Grek),
-		Cyrl: sorted(wholes_Cyrl),
-	}
+	script_order: SCRIPT_ORDER,
+	script_names: Object.fromEntries(SCRIPTS.entries.map(x => [x.abbr, x.name.replace('_', ' ')])),
+	scripts: Object.fromEntries(SCRIPT_ORDER.map(abbr => [abbr, sorted(SCRIPTS.require(abbr).set)])),
+	wholes: Object.fromEntries(wholes.map(x => [x.abbr, sorted(x.wholes)])),
+	restricted: Object.fromEntries(restricted.map(x => [x.abbr, sorted(x.restricted)])),	
+	restricted_wholes: sorted(restricted_wholes)
 }));
 
 // this file should be independent so we can create a standalone nf implementation
@@ -344,8 +422,17 @@ writeFileSync(new URL('./nf.json', out_dir), JSON.stringify({
 }));
 writeFileSync(new URL('./nf-tests.json', out_dir), JSON.stringify(UNICODE.nf_tests()));
 
-// convenience file for emoji.html (not critical)
-writeFileSync(new URL('./emoji-info.json', out_dir), JSON.stringify([...emoji.values()].map(info => {
+// conveniences files (not critical)
+// for emoji.html
+writeFileSync(new URL('./emoji-info.json', out_dir), JSON.stringify([...emoji.values(), ...emoji_disabled].map(info => {
 	let {cps, name, version, type} = info;
 	return {form: String.fromCodePoint(...cps), name, version, type};
 })));
+
+// for chars.html
+writeFileSync(new URL('./names.json', out_dir), JSON.stringify(UNICODE.chars.map(info => {
+	let name = UNICODE.get_name(info.cp);
+	if (!name) return [];
+	return [info.cp, name];
+}).filter(x => x)));
+writeFileSync(new URL('./scripts.json', out_dir), JSON.stringify(SCRIPTS.entries, (_, x) => x instanceof Set ? [...x] : x));

@@ -1,12 +1,16 @@
 import {parse_cp, parse_cp_range, parse_cp_sequence, hex_cp, hex_seq, explode_cp} from './utils.js';
 import {readFileSync} from 'node:fs';
 
-export function read_regions() {
+export function read_valid_regions() {
 	return JSON.parse(readFileSync(new URL('./data/regions.json', import.meta.url)));
 }
 
 export function read_excluded_scripts() {
 	 return JSON.parse(readFileSync(new URL('./data/scripts-excluded.json', import.meta.url)));
+}
+
+export function read_limited_scripts() {
+	return JSON.parse(readFileSync(new URL('./data/scripts-limited.json', import.meta.url)));
 }
 
 export function parse_semicolon_file(file, impl = {}) {
@@ -120,7 +124,7 @@ export class UnicodeSpec {
 		if (typeof x === 'number') {
 			let form = String.fromCodePoint(x);
 			if (this.cm.has(x)) {
-				form = 'x' + form;
+				form = '◌' + form; // DOTTED CIRCLE
 			}
 			ret = `${hex_cp(x)} (${form}) ${this.get_name(x)}`;
 		} else if (Array.isArray(x)) {
@@ -179,21 +183,6 @@ export class UnicodeSpec {
 			}
 		}));
 	}
-	confusables() {
-		// thes are SINGLE CHARCTERS that confuse with a SEQUENCE
-		// Each line in the data file has the following format: 
-		// - Field 1 is the source, 
-		// - Field 2 is the target,
-		// - Field 3 is obsolete, always containing the letters “MA” for backwards compatibility. 
-		// 06E8 ;	0306 0307 ;	MA	# ( ۨ → ̆̇ ) ARABIC SMALL HIGH NOON → COMBINING BREVE, COMBINING DOT ABOVE
-		// 0310 ;	0306 0307 ;	MA	# ( ̐ → ̆̇ ) COMBINING CANDRABINDU → COMBINING BREVE, COMBINING DOT ABOVE
-		return Object.entries(parse_semicolon_file(new URL('./confusables.txt', this.dir), {
-			row([src, target]) {
-				let key = String.fromCodePoint(...parse_cp_sequence(target));
-				this.get_bucket(key).push(parse_cp(src));
-			}
-		})).map(([key, cps]) => [explode_cp(key), cps]);
-	}
 	combining_ranks() {
 		// return list of codepoints in order by increasing combining class
 		// skips class 0
@@ -217,26 +206,6 @@ export class UnicodeSpec {
 	decompositions(compat = false) {
 		// "Conversely, the presence of a formatting tag also indicates that the mapping is a compatibility mapping and not a canonical mapping."
 		return this.chars.filter(x => x.decomp && (compat || !x.decomp_type)).map(x => [x.cp, x.decomp]);
-	}
-	nf_props() {
-		// 037A        ; FC_NFKC                     ; 0020 03B9 # Lm GREEK YPOGEGRAMMENI
-		// 11127       ; NFKC_QC                     ; M         # Mn CHAKMA VOWEL SIGN A
-		// 1F73        ; Full_Composition_Exclusion              # L& GREEK SMALL LETTER EPSILON WITH OXIA
-		// 00C0..00C5  ; Expands_On_NFD                          # L& [6] LATIN CAPITAL LETTER A WITH GRAVE..LATIN CAPITAL LETTER A WITH RING ABOVE
-		return parse_semicolon_file(new URL('./DerivedNormalizationProps.txt', this.dir), {
-			row([src, type, value]) {
-				if (type.endsWith('_QC')) {
-					let bucket = this.get_bucket(type);
-					for (let cp of parse_cp_range(src)) {
-						bucket.push([cp, value]);
-					}
-				} else if (type.startsWith('FC_')) {
-					this.get_bucket(type).push([parse_cp(src), parse_cp_sequence(value)]);
-				} else { 
-					this.get_bucket(type).push(...parse_cp_range(src));
-				}
-			}
-		});
 	}
 	composition_exclusions() {
 		// 0958    #  DEVANAGARI LETTER QA
@@ -269,10 +238,14 @@ export class UnicodeSpec {
 			row([src, type, name], comment) {
 				let version = parse_version_from_comment(comment);
 				if (src.includes('..')) {
-					let bucket = this.get_bucket(type);
-					for (let cp of parse_cp_range(src)) {
-						bucket.push({cps: [cp], type, name: self.get_name(cp), version});
-					}
+					let range = parse_cp_range(src).map(cp => {
+						return {cps: [cp], type, name: self.get_name(cp), version};
+					});
+					// use provide name if possible
+					let [first, last] = name.split('..');
+					range[0].name = first.trim();
+					range[range.length-1].name = last.trim();
+					this.get_bucket(type).push(...range);
 				} else {
 					let cps = parse_cp_sequence(src);
 					this.get_bucket(type).push({cps, type, name, version});
@@ -296,11 +269,21 @@ export class UnicodeSpec {
 			}
 		});
 	}
+	emoji_skin_colors() {
+		// warning: this sucks
+		// 1F3FB..1F3FF  ; Emoji_Component      # E1.0   [5] (🏻..🏿)    light skin tone..dark skin tone
+		return this.emoji_data().Emoji_Component.filter(x => /\b(FITZPATRICK)\b/i.test(x.name));
+	}
+	emoji_hair_colors() {
+		// warning: this sucks
+		// 1F9B0..1F9B3  ; Emoji_Component      # E11.0  [4] (🦰..🦳)    red hair..white hair
+		return this.emoji_data().Emoji_Component.filter(x => /\b(HAIR|BALD)\b/i.test(x.name));
+	}
 	regional_indicators() {
 		return this.props().Regional_Indicator;
 	}
 	valid_emoji_flag_sequences() {
-		let regions = read_regions(); // WARNING: not versioned by spec
+		let regions = read_valid_regions(); // WARNING: not versioned by spec
 		let cps = this.regional_indicators();
 		if (cps.length != 26) throw new Error('expected 26 regionals');
 		let dx = cps[0] - 0x41; // 'A'
@@ -375,6 +358,26 @@ export class UnicodeSpec {
 		});
 		return {valid, ignored, mapped};
 	}
+	nf_props() {
+		// 037A        ; FC_NFKC                     ; 0020 03B9 # Lm GREEK YPOGEGRAMMENI
+		// 11127       ; NFKC_QC                     ; M         # Mn CHAKMA VOWEL SIGN A
+		// 1F73        ; Full_Composition_Exclusion              # L& GREEK SMALL LETTER EPSILON WITH OXIA
+		// 00C0..00C5  ; Expands_On_NFD                          # L& [6] LATIN CAPITAL LETTER A WITH GRAVE..LATIN CAPITAL LETTER A WITH RING ABOVE
+		return parse_semicolon_file(new URL('./DerivedNormalizationProps.txt', this.dir), {
+			row([src, type, value]) {
+				if (type.endsWith('_QC')) {
+					let bucket = this.get_bucket(type);
+					for (let cp of parse_cp_range(src)) {
+						bucket.push([cp, value]);
+					}
+				} else if (type.startsWith('FC_')) {
+					this.get_bucket(type).push([parse_cp(src), parse_cp_sequence(value)]);
+				} else { 
+					this.get_bucket(type).push(...parse_cp_range(src));
+				}
+			}
+		});
+	}
 	nf_tests() {
 		return parse_semicolon_file(new URL('./NormalizationTest.txt', this.dir), {
 			row([src, nfc, nfd], comment) {
@@ -388,6 +391,50 @@ export class UnicodeSpec {
 			}	
 		});
 	}
+	confusables() {
+		// returns entries: [[target, cps], ...]
+		// thes are SINGLE CHARCTERS that confuse with a SEQUENCE
+		// Each line in the data file has the following format: 
+		// - Field 1 is the source, 
+		// - Field 2 is the target,
+		// - Field 3 is obsolete, always containing the letters “MA” for backwards compatibility. 
+		// 06E8 ;	0306 0307 ;	MA	# ( ۨ → ̆̇ ) ARABIC SMALL HIGH NOON → COMBINING BREVE, COMBINING DOT ABOVE
+		// 0310 ;	0306 0307 ;	MA	# ( ̐ → ̆̇ ) COMBINING CANDRABINDU → COMBINING BREVE, COMBINING DOT ABOVE
+		return Object.entries(parse_semicolon_file(new URL('./confusables.txt', this.dir), {
+			row([src, target]) {
+				let key = String.fromCodePoint(...parse_cp_sequence(target));
+				this.get_bucket(key).push(parse_cp(src));
+			}
+		})).map(([key, cps]) => [explode_cp(key), cps]);
+	}
+	intentional_confusables() { 
+		// returns list of pairs
+		// 0021 ;	01C3	#* ( ! ~ ǃ ) EXCLAMATION MARK ~ LATIN LETTER RETROFLEX CLICK
+		return parse_semicolon_file(new URL('./IdentifierStatus.txt', this.dir), {
+			root: [],
+			row([a, b]) {
+				this.root.push([parse_cp(a), parse_cp(b)]);
+			}
+		});
+	}
+	allowed_identifiers() { 
+		// returns list of codepoints
+		// 002D..002E ; Allowed    # 1.1    [2] HYPHEN-MINUS..FULL STOP
+		return parse_semicolon_file(new URL('./IdentifierStatus.txt', this.dir), {
+			root: [],
+			row([src]) {
+				this.root.push(...parse_cp_range(src));
+			}
+		});
+	}
+	identifier_types() { 
+		// returns map of name => codepoints
+		return parse_semicolon_file(new URL('./IdentifierType.txt', this.dir), {
+			row([src, type]) {
+				this.get_bucket(type).push(...parse_cp_range(src));
+			}
+		});
+	}
 }
 
 function parse_version_from_comment(s) {
@@ -399,6 +446,8 @@ function parse_version_from_comment(s) {
 export class UnicodeScripts {
 	constructor(spec) {
 		this.spec = spec;
+		let ext = spec.script_extensions();
+		let ext_set = new Set(ext.flatMap(x => x[1]));
 		let {sc} = spec.prop_values(); // sc = Script
 		// this.names = new Map(sc.map(v => [v[0], v[1]])); // abbr -> name
 		let name2abbr = new Map(sc.map(v => [v[1], v[0]])); // name -> abbr
@@ -406,17 +455,40 @@ export class UnicodeScripts {
 		this.entries = spec.scripts().map(([name, cps]) => {
 			let abbr = name2abbr.get(name);
 			if (!abbr) throw new TypeError(`unknown script abbr: ${name}`);
-			return {name, abbr, set: new Set(cps)};
+			return {name, abbr, set: new Set(cps.filter(cp => !ext_set.has(cp)))};
 		});
 		this.by_abbr = Object.fromEntries(this.entries.map(x => [x.abbr, x])); // use Object so we can $.Latn
+		// apply extensions
+		for (let [abbr, cps] of ext) {
+			let {set} = this.require(abbr);
+			for (let cp of cps) {
+				set.add(cp);
+			}
+		}
+	}
+	require(abbr) {		
+		let script = this.by_abbr[abbr];
+		if (!script) throw new TypeError(`expected script abbr: ${abbr}`);
+		return script;
 	}
 	excluded() { 
 		return read_excluded_scripts(); 
 	}
-	//extensions() { return this.spec.script_extensions(); }
-	get_script_set(cps) {
+	limited() { 
+		return read_limited_scripts(); 
+	}
+	/*
+	get_script(cp) {
+		for (let {abbr, set} of this.entries) {
+			if (set.has(cp)) {
+				return abbr;
+			}
+		}
+	}
+	*/
+	get_script_set(x) {
 		let ret = new Set();
-		for (let cp of cps) {
+		for (let cp of explode_cp(x)) {
 			for (let {abbr, set} of this.entries) {
 				if (set.has(cp)) {
 					ret.add(abbr);
@@ -425,9 +497,9 @@ export class UnicodeScripts {
 		}
 		return ret;
 	}
-	get_augmented_script_set(cps) {
+	get_augmented_script_set(x) {
 		// https://www.unicode.org/reports/tr39/#Mixed_Script_Detection
-		let ret = this.get_script_set(cps);
+		let ret = this.get_script_set(x);
 		if (ret.has('Hani')) {
 			ret.add('Hanb');
 			ret.add('Jpan');
@@ -437,38 +509,37 @@ export class UnicodeScripts {
 		if (ret.has('Kana')) ret.add('Jpan');
 		if (ret.has('Hang')) ret.add('Kore');
 		if (ret.has('Bopo')) ret.add('Hanb');
-		if (ret.has('Zyyy') || has.has('Zinh')) {
-			ret.delete('Zyyy');
-			ret.delete('Zinh');
-			// TODO: this needs special handling
-			ret.add('ALL');
+		if (ret.has('Zyyy') || ret.has('Zinh')) {
+			ret.clear();
+			ret.add('*');
 		}
 		return ret;
 	}
-	// https://www.unicode.org/reports/tr39/#Whole_Script_Confusables
-	// confusables = [target: number[], cps: number[]]
-	// for example:
-	//   237A ;	0061 ; ⍺ → a ) APL FUNCTIONAL SYMBOL ALPHA → LATIN SMALL LETTER A
-	//   FF41 ;	0061 ; ａ → a ) FULLWIDTH LATIN SMALL LETTER A → LATIN SMALL LETTER A
-	// confusables = [[0x61], [0x237A, 0xFF41]]
-	wholes_from_single(abbr0, confusables, ...abbrs) {
-		let wholes = [];	
-		let script0 = this.by_abbr[abbr0];
-		if (!script0) throw new TypeError(`unknown script: ${abbr0}`);
-		for (let abbr of abbrs) {
-			if (!this.by_abbr[abbr]) {
-				throw new TypeError(`unknown script: ${abbr}`);
+	get_resolved_script_set(x) {
+		// https://www.unicode.org/reports/tr39/#def-resolved-script-set
+		let cps = explode_cp(x);
+		if (!cps.length) return new Set();
+		let resolved = this.get_augmented_script_set(cps[0]);
+		for (let i = 1; i < cps.length; i++) {
+			let set = this.get_resolved_script_set(cps[i]);
+			if (set.has('*')) continue;
+			if (resolved.has('*')) {
+				resolved = set;
+			} else {
+				for (let abbr of set) {
+					if (!resolved.has(abbr)) {
+						resolved.delete(abbr);
+					}
+				}
+				for (let abbr of resolved) {
+					if (!set.has(abbr)) {
+						resolved.delete(abbr);
+					}
+				}
+
 			}
 		}
-		for (let [target, cps] of confusables) {
-			let matches = cps.filter(cp => script0.set.has(cp));
-			if (!matches.length) continue;
-			let cover_set = this.get_script_set(target);
-			if (!cover_set.has(abbr0) || abbrs.some(abbr => cover_set.has(abbr))) {
-				wholes.push([target, matches]);
-			}
-		}
-		return wholes;
+		return resolved;
 	}
 
 }

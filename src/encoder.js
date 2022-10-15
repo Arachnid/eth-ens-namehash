@@ -75,16 +75,18 @@ export function bytes_from_bits(v) {
 }
 
 // vary symbol count to find best encoding 
-export function best_arithmetic(symbols, max = 64) {
+export function best_arithmetic(symbols, max = 128) { 
 	let best;
 	for (let n = 0; n <= max; n++) {
 		let v = encode_arithmetic(symbols, n);
-		if (!best || v.length < best.length) {
-			best = v;
+		if (!best || v.length < best.data.length) {
+			best = {data: v, symbols: n};
 		}
 	}
 	return best;
 }
+
+export const MAX_LINEAR = 251;
 
 // TODO: make this adaptive
 // TODO: make payload symbols encoded as bit-width symbols
@@ -94,7 +96,8 @@ export function best_arithmetic(symbols, max = 64) {
 // 10000 => w=5 0000 
 export function encode_arithmetic(symbols, linear) {	
 	if (symbols.length == 0) throw new Error(`no symbols`);
-	if (linear < 0) throw new Error(`should be non-negative`);
+	if (linear < 0) throw new Error(`linear symbols must be non-negative`);
+	if (linear > MAX_LINEAR) throw new Error(`too many linear symbols`);
 	let payload = [];
 	symbols = symbols.map(x => {
 		if (x >= linear) {
@@ -118,6 +121,7 @@ export function encode_arithmetic(symbols, linear) {
 	symbols.push(0); // END
 	// create frequency table
 	let freq = Array(linear + 4).fill(0); // END + 1,2,3-byte symbols
+	if (freq.length > 255) throw new Error(`bug`);
 	for (let x of symbols) freq[x]++;
 	freq = freq.map(x => Math.max(1, x)); // prevent sparse
 	// create accumulated table
@@ -166,8 +170,8 @@ export function encode_arithmetic(symbols, linear) {
 	return header.concat(payload, bytes_from_bits(bits));
 }
 
-export function unsafe_btoa(buf) {
-	return buf.toString('base64').replace(/=+$/, '');
+export function unsafe_btoa(v) {
+	return Buffer.from(v).toString('base64').replace(/=+$/, '');
 }
 
 export class Encoder {

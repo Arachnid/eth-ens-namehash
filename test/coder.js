@@ -1,10 +1,10 @@
-import {encode_arithmetic, unsafe_btoa} from '../src/encoder.js';
+import {encode_arithmetic, unsafe_btoa, MAX_LINEAR} from '../src/encoder.js';
 import {decode_arithmetic, unsafe_atob} from '../src/decoder.js';
 import {compare_arrays} from '../src/utils.js';
 
 for (let i = 0; i < 1000; i++) {
 	let n = 1 + (Math.random() * 10000)|0;
-	let u = 1 + (Math.random() * 500)|0;
+	let u = 1 + (Math.random() * MAX_LINEAR)|0;
 	let v0 = [];
 	for (let i = 0; i < n; i++) {
 		if (Math.random() < 0.8) {
@@ -23,7 +23,7 @@ for (let i = 0; i < 1000; i++) {
 console.log(`PASS arthimetic`);
 
 for (let i = 0; i < 10000; i++) {
-	let v0 = Buffer.from(Array(Math.random() * 1000|0).fill().map(() => Math.random() * 255|0));
+	let v0 = Array(Math.random() * 1000|0).fill().map(() => Math.random() * 255|0);
 	let s = unsafe_btoa(v0);
 	let v1 = Uint8Array.from(atob(s), c => c.codePointAt(0));
 	let v2 = unsafe_atob(s);
