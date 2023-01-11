@@ -43,15 +43,17 @@ interface Label {
 	type?: string;
 }
 
+/** Alias for namehash() */
 export function hash(name: string): string;
+
 export function namehash(name: string): string;
 export function labelhash(label: string): string;
 export function normhash(name: string): string;
 
 export function normalize(name: string): string;
-export function normalizeFragment(frag: string, preserve_emoji?: boolean): string;
+export function normalizeFragment(frag: string, decompose?: boolean): string;
 export function beautify(name: string): string;
-export function tokenize(name: string): Token[];
+export function tokenize(name: string, options?: {nf?: boolean}): Token[];
 export function split(name: string, preserve_emoji?: boolean): Label[];
 
 export function emojis(): number[][];
