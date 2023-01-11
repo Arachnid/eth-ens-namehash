@@ -1,16 +1,21 @@
-import {normalize, namehash, beautify, tokenize, supportedEmojis} from '../src/index.js';
+import * as lib from '../src/index.js';
 
-let normalized = normalize('👨️‍💻nIcK.EtH');
+let name = '👨️‍💻nIcK.EtH';
+let normalized = lib.normalize(name);
 console.log({normalized});
 
-let node = namehash(normalized);
+let node = lib.namehash(normalized);
 console.log({node});
+console.log(node === lib.normhash(name));
 
-let pretty = beautify('1⃣2⃣.eth'); 
+let pretty = lib.beautify('1⃣2⃣.eth'); 
 console.log({pretty});
 
-let tokens = tokenize('_R💩\u{FE0F}a\u{FE0F}\u{304}\u{AD}./');
+let tokens = lib.tokenize('_R💩\u{FE0F}a\u{FE0F}\u{304}\u{AD}./');
 console.log(tokens);
 
-let emojis = supportedEmojis();
-console.log(emojis);
+let split = lib.split('💩Raffy.eth_');
+console.log(split);
+
+let emojis = lib.emojis();
+console.log(emojis.slice(0, 3));

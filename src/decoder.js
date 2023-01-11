@@ -85,7 +85,7 @@ export function read_payload(v) {
 	let pos = 0;
 	return () => v[pos++];
 }
-export function read_compressed_payload(s) {	
+export function read_compressed_payload(s) {
 	return read_payload(decode_arithmetic(unsafe_atob(s)));
 }
 
@@ -123,10 +123,33 @@ function read_ascending(n, next) {
 	return v;
 }
 
-function read_deltas(n, next) {
+export function read_deltas(n, next) {
 	let v = Array(n);
 	for (let i = 0, x = 0; i < n; i++) v[i] = x += signed(next());
 	return v;
+}
+
+// [123][5] => [0 3] [1 1] [0 0]
+export function read_sorted(next, prev = 0) {
+	let ret = [];
+	while (true) {
+		let x = next();
+		let n = next();
+		if (!n) break;
+		prev += x;
+		for (let i = 0; i < n; i++) {
+			ret.push(prev + i);
+		}
+		prev += n + 1;
+	}
+	return ret;
+}
+
+export function read_sorted_arrays(next) {
+	return read_array_while(() => { 
+		let v = read_sorted(next);
+		if (v.length) return v;
+	});
 }
 
 // return unsorted? unique array 
@@ -164,7 +187,7 @@ export function read_mapped(next) {
 export function read_array_while(next) {
 	let v = [];
 	while (true) {
-		let x = next();
+		let x = next(v.length);
 		if (!x) break;
 		v.push(x);
 	}
@@ -226,3 +249,14 @@ export function read_emoji_trie(next) {
 		return {branches, valid, fe0f, save, check};
 	}
 }
+
+// read a list of non-empty lists
+// where 0 is terminal
+// [1 0 1 2 0 0] => [[1],[1,2]]
+export function read_sequences(next) {
+	return read_array_while(() => {
+		let v = read_array_while(next);
+		if (v.length) return v.map(x => x - 1);
+	});
+}
+

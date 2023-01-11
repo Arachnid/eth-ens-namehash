@@ -1,6 +1,6 @@
 {
   "name": "@ensdomains/eth-ens-namehash",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "description": "Ethereum Name Service (ENS) Name Normalizer",
   "keywords": [
     "ENS",
@@ -14,6 +14,7 @@
   ],
   "type": "module",
   "main": "src/index.js",
+  "types": "src/index.d.ts",
   "files": [
     "./src"
   ],
@@ -28,11 +29,7 @@
   "homepage": "https://github.com/ensdomains/eth-ens-namehash#readme",
   "author": "raffy.eth",
   "scripts": {
-    "derive": "node derive/make.js",
-    "make": "node src/make.js",
-    "validate": "node validate/make.js",
-    "test": "node test/validate.js && node test/hash.js && node test/coder.js && node test/nf.js",
-	"rebuild": "npm run derive && npm run make && npm run validate && npm run test"
+    "test": "node test/validate.js && node test/hash.js"
   },
   "dependencies": {
     "js-sha3": "^0.8.0"
