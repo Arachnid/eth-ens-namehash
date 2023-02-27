@@ -18,9 +18,14 @@ npm install @ensdomains/eth-ens-namehash --save
 
 ```Javascript
 import * as lib from '@ensdomains/eth-ens-namehash'; 
-// this library is ESM not CJS
-// this library does not enforce a minimum label length
+
 // *** ALL errors thrown by this library are safe to print ***
+// - characters are shown as {HEX} if should_escape()
+// - potentially different bidi directions inside "quotes"
+// - 200E is used near "quotes" to prevent spillover
+// - an "error type" can be extracted by slicing up to the first (:)
+
+// note: does not enforce .eth TLD 3-character minimum
 ```
 
 Normalize a name:
@@ -55,8 +60,8 @@ Input-based tokenization:
 // never throws
 let tokens = lib.tokenize('_R💩\u{FE0F}a\u{FE0F}\u{304}\u{AD}./');
 // [
-//     { type: 'valid', cp: 95 },     // valid
-//     {                              // (eg. no combining marks)
+//     { type: 'valid', cp: [ 95 ] }, // valid (as-is)
+//     {
 //         type: 'mapped', 
 //         cp: 82,         // input
 //         cps: [ 114 ]    // output
@@ -65,16 +70,19 @@ let tokens = lib.tokenize('_R💩\u{FE0F}a\u{FE0F}\u{304}\u{AD}./');
 //         type: 'emoji',
 //         input: Emoji(2) [ 128169, 65039 ],  // input 
 //         emoji: [ 128169, 65039 ],           // fully-qualified
-//         cps: Emoji(1) [ 128169 ]            // output
+//         cps: Emoji(1) [ 128169 ]            // output (normalized)
 //     },
 //     {
 //         type: 'nfc',
-//         input: [ 97, 772 ],  // input (before nfc, only valid or mapped)
-//         cps: [ 257 ],        // output (after nfc)
-//         tokens: [            // tokens (before nfc)
+//         input: [ 97, 772 ],  // input  (before nfc)
+//         tokens0: [           // tokens (before nfc)
 //             { type: 'valid', cps: [ 97 ] },
 //             { type: 'ignored', cp: 65039 },
 //             { type: 'valid', cps: [ 772 ] }
+//         ],
+//         cps: [ 257 ],        // output (after nfc)
+//         tokens: [            // tokens (after nfc)
+//             { type: 'valid', cps: [ 257 ] }
 //         ]
 //     },
 //     { type: 'ignored', cp: 173 },
@@ -106,8 +114,7 @@ let labels = lib.split('💩Raffy.eth_');
 //     offset: 7,
 //     tokens: [ [ 101, 116, 104, 95 ] ],
 //     output: [ 101, 116, 104, 95 ],
-//     emoji: false,
-//     error: Error('underscore only allowed at start')
+//     error: Error('underscore allowed only at start')
 //   }
 // ]
 ```
@@ -123,7 +130,6 @@ console.log(lib.emojis());
 //     ...
 // ]
 ```
-
 
 ## How to Sync from `@adraffy/ens-normalize.js`
 

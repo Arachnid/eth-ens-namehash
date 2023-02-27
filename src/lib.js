@@ -1,5 +1,5 @@
 //const t0 = performance.now();
-import r, {FENCED} from './include-ens.js';
+import r, {FENCED, NSM_MAX} from './include-ens.js';
 import {read_sorted, read_sorted_arrays, read_mapped, read_array_while} from './decoder.js';
 import {explode_cp, str_from_cps, quote_cp, compare_arrays} from './utils.js';
 import {nfc, nfd} from './nf.js';
@@ -10,6 +10,7 @@ const STOP = 0x2E;
 const FE0F = 0xFE0F;
 const STOP_CH = '.';
 const UNIQUE_PH = 1;
+const HYPHEN = 0x2D;
 
 function read_set() {
 	return new Set(read_sorted(r));
@@ -23,7 +24,15 @@ const FENCED = new Map(read_array_while(() => {
 	if (cp) return [cp, read_str(r())];
 }));
 */
+// 20230217: we still need all CM for proper error formatting
+// but norm only needs NSM subset that are potentially-valid
 const CM = read_set();
+const NSM = new Set(read_sorted(r).map(function(i) { return this[i]; }, [...CM]));
+/*
+const CM_SORTED = read_sorted(r);
+const NSM = new Set(read_sorted(r).map(i => CM_SORTED[i]));
+const CM = new Set(CM_SORTED);
+*/
 const ESCAPE = read_set(); // characters that should not be printed
 const NFC_CHECK = read_set();
 const CHUNKS = read_sorted_arrays(r);
@@ -33,6 +42,8 @@ function read_chunked() {
 }
 const UNRESTRICTED = r();
 const GROUPS = read_array_while(i => {
+	// minifier property mangling seems unsafe
+	// so these are manually renamed to single chars
 	let N = read_array_while(r).map(x => x+0x60);
 	if (N.length) {
 		let R = i >= UNRESTRICTED; // first arent restricted
@@ -42,7 +53,8 @@ const GROUPS = read_array_while(i => {
 		let P = read_chunked(r); // primary
 		let Q = read_chunked(r); // secondary
 		let V = [...P, ...Q].sort((a, b) => a-b); // derive: sorted valid
-		let M = r()-1; // combining mark
+		//let M = r()-1; // combining mark
+		let M = !r(); // not-whitelisted, check for NSM
 		// code currently isn't needed
 		/*if (M < 0) { // whitelisted
 			M = new Map(read_array_while(() => {
@@ -58,15 +70,18 @@ const GROUPS = read_array_while(i => {
 });
 const WHOLE_VALID = read_set();
 const WHOLE_MAP = new Map();
+// decode compressed wholes
 [...WHOLE_VALID, ...read_set()].sort((a, b) => a-b).map((cp, i, v) => {
 	let d = r(); 
 	let w = v[i] = d ? v[i-d] : {V: [], M: new Map()};
-	w.V.push(cp);
+	w.V.push(cp); // add to member set
 	if (!WHOLE_VALID.has(cp)) {
-		WHOLE_MAP.set(cp, w); 
+		WHOLE_MAP.set(cp, w);  // register with whole map
 	}
 });
+// compute confusable-extent complements
 for (let {V, M} of new Set(WHOLE_MAP.values())) {
+	// connect all groups that have each whole character
 	let recs = [];
 	for (let cp of V) {
 		let gs = GROUPS.filter(g => g.V.has(cp));
@@ -77,7 +92,8 @@ for (let {V, M} of new Set(WHOLE_MAP.values())) {
 		}
 		rec.V.push(cp);
 		gs.forEach(g => rec.G.add(g));
-	}	
+	}
+	// per character cache groups which are not a member of the extent
 	let union = recs.flatMap(({G}) => [...G]);
 	for (let {G, V} of recs) {
 		let complement = new Set(union.filter(g => !G.has(g)));
@@ -86,29 +102,23 @@ for (let {V, M} of new Set(WHOLE_MAP.values())) {
 		}
 	}
 }
-let union = new Set();
-let multi = new Set();
+let union = new Set(); // exists in 1+ groups
+let multi = new Set(); // exists in 2+ groups
 for (let g of GROUPS) {
 	for (let cp of g.V) {
 		(union.has(cp) ? multi : union).add(cp);
 	}
 }
+// dual purpose WHOLE_MAP: return placeholder if unique non-confusable
 for (let cp of union) {
 	if (!WHOLE_MAP.has(cp) && !multi.has(cp)) {
 		WHOLE_MAP.set(cp, UNIQUE_PH);
 	}
 }
-/*
-// this is too slow, 500ms+
-let valid_union = [...new Set(GROUPS.flatMap(g => [...g.V]))];
-for (let cp of valid_union) {
-	if (!WHOLE_MAP.has(cp) && GROUPS.filter(g => g.V.has(cp)).length == 1) {
-		WHOLE_MAP.set(cp, UNIQUE_PH);
-	}
-}
-*/
-const VALID = new Set([...union, ...nfd(union)]); // 30ms
-const EMOJI_SORTED = read_sorted(r);
+const VALID = new Set([...union, ...nfd(union)]); // possibly valid
+
+// decode emoji
+const EMOJI_SORTED = read_sorted(r); // temporary
 //const EMOJI_SOLO = new Set(read_sorted(r).map(i => EMOJI_SORTED[i])); // not needed
 const EMOJI_ROOT = read_emoji_trie([]);
 function read_emoji_trie(cps) {
@@ -135,6 +145,8 @@ class Emoji extends Array {
 // create a safe to print string 
 // invisibles are escaped
 // leading cm uses placeholder
+// quoter(cp) => string, eg. 3000 => "{3000}"
+// note: in html, you'd call this function then replace [<>&] with entities
 export function safe_str_from_cps(cps, quoter = quote_cp) {
 	//if (Number.isInteger(cps)) cps = [cps];
 	//if (!Array.isArray(cps)) throw new TypeError(`expected codepoints`);
@@ -157,11 +169,18 @@ export function safe_str_from_cps(cps, quoter = quote_cp) {
 // if escaped: {HEX}
 //       else: "x" {HEX}
 function quoted_cp(cp) {
-	return (should_escape(cp) ? '' : `"${safe_str_from_cps([cp])}" `) + quote_cp(cp);
+	return (should_escape(cp) ? '' : `${bidi_qq(safe_str_from_cps([cp]))} `) + quote_cp(cp);
+}
+
+// 20230211: some messages can be mixed-directional and result in spillover
+// use 200E after a quoted string to force the remainder of a string from 
+// acquring the direction of the quote
+// https://www.w3.org/International/questions/qa-bidi-unicode-controls#exceptions
+function bidi_qq(s) {
+	return `"${s}"\u200E`; // strong LTR
 }
 
 function check_label_extension(cps) {
-	const HYPHEN = 0x2D;
 	if (cps.length >= 4 && cps[2] == HYPHEN && cps[3] == HYPHEN) {
 		throw new Error('invalid label extension');
 	}
@@ -180,11 +199,12 @@ function check_fenced(cps) {
 	let prev = FENCED.get(cp);
 	if (prev) throw error_placement(`leading ${prev}`);
 	let n = cps.length;
-	let last = -1;
+	let last = -1; // prevents trailing from throwing
 	for (let i = 1; i < n; i++) {
 		cp = cps[i];
 		let match = FENCED.get(cp);
 		if (match) {
+			// since cps[0] isn't fenced, cps[1] cannot throw
 			if (last == i) throw error_placement(`${prev} + ${match}`);
 			last = i + 1;
 			prev = match;
@@ -193,10 +213,10 @@ function check_fenced(cps) {
 	if (last == n) throw error_placement(`trailing ${prev}`);
 }
 
+// note: set(s) cannot be exposed because they can be modified
 export function is_combining_mark(cp) {
 	return CM.has(cp);
 }
-
 export function should_escape(cp) {
 	return ESCAPE.has(cp);
 }
@@ -214,7 +234,26 @@ export function ens_beautify(name) {
 	let split = ens_split(name, true);
 	// this is experimental
 	for (let {type, output, error} of split) {
-		if (!error && type !== 'Greek') { // ξ => Ξ if not greek
+		if (error) continue;
+
+		// replace leading/trailing hyphen
+		// 20230121: consider beautifing all or leading/trailing hyphen to unicode variant
+		// not exactly the same in every font, but very similar: "-" vs "‐"
+		/*
+		const UNICODE_HYPHEN = 0x2010;
+		// maybe this should replace all for visual consistancy?
+		// `node tools/reg-count.js regex ^-\{2,\}` => 592
+		//for (let i = 0; i < output.length; i++) if (output[i] == 0x2D) output[i] = 0x2010;
+		if (output[0] == HYPHEN) output[0] = UNICODE_HYPHEN;
+		let end = output.length-1;
+		if (output[end] == HYPHEN) output[end] = UNICODE_HYPHEN;
+		*/
+		// 20230123: WHATWG URL uses "CheckHyphens" false
+		// https://url.spec.whatwg.org/#idna
+
+		// update ethereum symbol
+		// ξ => Ξ if not greek
+		if (type !== 'Greek') { 
 			let prev = 0;
 			while (true) {
 				let next = output.indexOf(0x3BE, prev);
@@ -223,6 +262,7 @@ export function ens_beautify(name) {
 				prev = next + 1;
 			}
 		}
+
 		// 20221213: fixes bidi subdomain issue, but breaks invariant (200E is disallowed)
 		// could be fixed with special case for: 2D (.) + 200E (LTR)
 		//output.splice(0, 0, 0x200E);
@@ -232,8 +272,8 @@ export function ens_beautify(name) {
 
 export function ens_split(name, preserve_emoji) {
 	let offset = 0;
-	// https://unicode.org/reports/tr46/#Validity_Criteria 4.1 Rule 4
-	// "The label must not contain a U+002E ( . ) FULL STOP."
+	// https://unicode.org/reports/tr46/#Validity_Criteria
+	// 4.) "The label must not contain a U+002E ( . ) FULL STOP."
 	return name.split(STOP_CH).map(label => {
 		let input = explode_cp(label);
 		let info = {
@@ -243,23 +283,29 @@ export function ens_split(name, preserve_emoji) {
 		offset += input.length + 1; // + stop
 		let norm;
 		try {
+			// 1.) "The label must be in Unicode Normalization Form NFC"
 			let tokens = info.tokens = process(input, nfc); // if we parse, we get [norm and mapped]
 			let token_count = tokens.length;
 			let type;
 			if (!token_count) { // the label was effectively empty (could of had ignored characters)
-				norm = [];
-				type = 'None'; // use this instead of "Common"
+				// 20230120: change to strict
+				// https://discuss.ens.domains/t/ens-name-normalization-2nd/14564/59
+				//norm = [];
+				//type = 'None'; // use this instead of next match, "ASCII"
+				throw new Error(`empty label`);
 			} else {
 				let chars = tokens[0];
 				let emoji = token_count > 1 || chars.is_emoji;
 				if (!emoji && chars.every(cp => cp < 0x80)) { // special case for ascii
 					norm = chars;
 					check_leading_underscore(norm);
-					check_label_extension(norm); // only needed for ascii
+					// only needed for ascii
+					// 20230123: matches matches WHATWG, see note 3.3
+					check_label_extension(norm);
 					// cant have fenced
 					// cant have cm
 					// cant have wholes
-					// see derive: assert ascii fast path
+					// see derive: "Fastpath ASCII"
 					type = 'ASCII';
 				} else {
 					if (emoji) { // there is at least one emoji
@@ -271,21 +317,27 @@ export function ens_split(name, preserve_emoji) {
 					if (!chars.length) { // theres no text, just emoji
 						type = 'Emoji';
 					} else {
+						// 5. "The label must not begin with a combining mark, that is: General_Category=Mark."
 						if (CM.has(norm[0])) throw error_placement('leading combining mark');
 						for (let i = 1; i < token_count; i++) { // we've already checked the first token
 							let cps = tokens[i];
 							if (!cps.is_emoji && CM.has(cps[0])) { // every text token has emoji neighbors, eg. EtEEEtEt...
-								throw error_placement(`emoji + combining mark: "${str_from_cps(tokens[i-1])} + ${safe_str_from_cps([cps[0]])}"`);
+								// bidi_qq() not needed since emoji is LTR and cps is a CM
+								throw error_placement(`emoji + combining mark: "${str_from_cps(tokens[i-1])} + ${safe_str_from_cps([cps[0]])}"`); 
 							}
 						}
 						check_fenced(norm);
 						let unique = [...new Set(chars)];
 						let [g] = determine_group(unique); // take the first match
-						// see derive: equivalent up to naming
+						// see derive: "Matching Groups have Same CM Style"
 						// alternative: could form a hybrid type: Latin/Japanese/...	
 						check_group(g, chars); // need text in order
-						check_whole(g, unique); // only need unique (order would be required for multiple-char confusables)
+						check_whole(g, unique); // only need unique text (order would be required for multiple-char confusables)
 						type = g.N;
+						// 20230121: consider exposing restricted flag
+						// it's simpler to just check for 'Restricted'
+						// or even better: type.endsWith(']')
+						//if (g.R) info.restricted = true;
 					}
 				}
 			}
@@ -357,12 +409,12 @@ function flatten(split) {
 		if (error) {
 			// don't print label again if just a single label
 			let msg = error.message;
-			throw new Error(split.length == 1 ? msg : `Invalid label "${safe_str_from_cps(input)}": ${msg}`);
+			// bidi_qq() only necessary if msg is digits
+			throw new Error(split.length == 1 ? msg : `Invalid label ${bidi_qq(safe_str_from_cps(input))}: ${msg}`); 
 		}
 		return str_from_cps(output);
 	}).join(STOP_CH);
 }
-
 
 function error_disallowed(cp) {
 	// TODO: add cp to error?
@@ -382,35 +434,56 @@ function error_placement(where) {
 
 // assumption: cps.length > 0
 // assumption: cps[0] isn't a CM
+// assumption: the previous character isn't an emoji
 function check_group(g, cps) {
 	let {V, M} = g;
-	/*
-	for (let i = 0; i < cps.length; i++) {
-		let cp = cps[i];
-		if (!V.has(cp)) {
-			if (CM.has(cp)) {
-				throw new Error(`disallowed combining mark: "${str_from_cps([cps[i-1], cp])}" ${quote_cp(cp)}`);
-			} else {
-				throw error_group_member(g, cp);
-			}
-		}
-	}
-	*/
 	for (let cp of cps) {
 		if (!V.has(cp)) {
+			// for whitelisted scripts, this will throw illegal mixture on invalid cm, eg. "e{300}{300}"
+			// at the moment, it's unnecessary to introduce an extra error type
+			// until there exists a whitelisted multi-character
+			//   eg. if (M < 0 && is_combining_mark(cp)) { ... }
+			// there are 3 cases:
+			//   1. illegal cm for wrong group => mixture error
+			//   2. illegal cm for same group => cm error
+			//       requires set of whitelist cm per group: 
+			//        eg. new Set([...g.V].flatMap(nfc).filter(cp => CM.has(cp)))
+			//   3. wrong group => mixture error
 			throw error_group_member(g, cp);
 		}
 	}
-	if (M >= 0) {
-		// we know it can't be cm leading
-		// we know the previous character isn't an emoji
+	//if (M >= 0) { // we have a known fixed cm count
+	if (M) { // we need to check for NSM
 		let decomposed = nfd(cps);
-		for (let i = 1, e = decomposed.length; i < e; i++) {
-			if (CM.has(cps[i])) {
+		for (let i = 1, e = decomposed.length; i < e; i++) { // see: assumption
+			// 20230210: bugfix: using cps instead of decomposed h/t Carbon225
+			/*
+			if (CM.has(decomposed[i])) {
 				let j = i + 1;
-				while (j < e && CM.has(cps[j])) j++;
+				while (j < e && CM.has(decomposed[j])) j++;
 				if (j - i > M) {
-					throw new Error(`too many combining marks: ${g.N} "${str_from_cps(cps.slice(i-1, j))}" (${j-i}/${M})`);
+					throw new Error(`too many combining marks: ${g.N} ${bidi_qq(str_from_cps(decomposed.slice(i-1, j)))} (${j-i}/${M})`);
+				}
+				i = j;
+			}
+			*/
+			// 20230217: switch to NSM counting
+			// https://www.unicode.org/reports/tr39/#Optional_Detection
+			if (NSM.has(decomposed[i])) {
+				let j = i + 1;
+				for (let cp; j < e && NSM.has(cp = decomposed[j]); j++) {
+					// a. Forbid sequences of the same nonspacing mark.
+					for (let k = i; k < j; k++) { // O(n^2) but n < 100
+						if (decomposed[k] == cp) {
+							throw new Error(`non-spacing marks: repeated ${quoted_cp(cp)}`);
+						}
+					}
+				}
+				// parse to end so we have full nsm count
+				// b. Forbid sequences of more than 4 nonspacing marks (gc=Mn or gc=Me).
+				if (j - i > NSM_MAX) {
+					// note: this slice starts with a base char or spacing-mark cm
+					throw new Error(`non-spacing marks: too many ${bidi_qq(safe_str_from_cps(decomposed.slice(i-1, j)))} (${j-i}/${NSM_MAX})`);
 				}
 				i = j;
 			}
@@ -451,11 +524,11 @@ function check_group(g, cps) {
 	if (!cm_whitelist) {
 		let decomposed = nfd(cps);
 		for (let i = 1, e = decomposed.length; i < e; i++) { // we know it can't be cm leading
-			if (CM.has(cps[i])) {
+			if (CM.has(decomposed[i])) {
 				let j = i + 1;
-				while (j < e && CM.has(cps[j])) j++;
+				while (j < e && CM.has(decomposed[j])) j++;
 				if (j - i > M) {
-					throw new Error(`too many combining marks: "${str_from_cps(cps.slice(i-1, j))}" (${j-i}/${M})`);
+					throw new Error(`too many combining marks: "${str_from_cps(decomposed.slice(i-1, j))}" (${j-i}/${M})`);
 				}
 				i = j;
 			}
