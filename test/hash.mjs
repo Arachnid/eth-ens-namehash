@@ -1,4 +1,4 @@
-import {namehash} from '../src/index.js';
+import {namehash} from '../src/index.mjs';
 
 let m = [
 	['0x0000000000000000000000000000000000000000000000000000000000000000', ''],

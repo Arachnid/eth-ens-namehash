@@ -1,9 +1,9 @@
 // https://unicode.org/reports/tr15/
 // for reference implementation
-// see: /derive/nf.js
+// see: /derive/nf.mjs
 
-import r from './include-nf.js';
-import {read_sorted, read_sorted_arrays, read_mapped} from './decoder.js';
+import r from './include-nf.mjs';
+import {read_sorted, read_sorted_arrays, read_mapped} from './decoder.mjs';
 
 function unpack_cc(packed) {
 	return (packed >> 24) & 0xFF;

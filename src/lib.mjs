@@ -1,9 +1,9 @@
 //const t0 = performance.now();
-import r, {FENCED, NSM_MAX} from './include-ens.js';
-import {read_sorted, read_sorted_arrays, read_mapped, read_array_while} from './decoder.js';
-import {explode_cp, str_from_cps, quote_cp, compare_arrays} from './utils.js';
-import {nfc, nfd} from './nf.js';
-//import {nfc, nfd} from './nf-native.js'; // replaced by rollup
+import r, {FENCED, NSM_MAX} from './include-ens.mjs';
+import {read_sorted, read_sorted_arrays, read_mapped, read_array_while} from './decoder.mjs';
+import {explode_cp, str_from_cps, quote_cp, compare_arrays} from './utils.mjs';
+import {nfc, nfd} from './nf.mjs';
+//import {nfc, nfd} from './nf-native.mjs'; // replaced by rollup
 export {nfc, nfd}; 
 
 const STOP = 0x2E;
@@ -242,7 +242,7 @@ export function ens_beautify(name) {
 		/*
 		const UNICODE_HYPHEN = 0x2010;
 		// maybe this should replace all for visual consistancy?
-		// `node tools/reg-count.js regex ^-\{2,\}` => 592
+		// `node tools/reg-count.mjs regex ^-\{2,\}` => 592
 		//for (let i = 0; i < output.length; i++) if (output[i] == 0x2D) output[i] = 0x2010;
 		if (output[0] == HYPHEN) output[0] = UNICODE_HYPHEN;
 		let end = output.length-1;
@@ -626,7 +626,7 @@ function consume_emoji_reversed(cps, eaten) {
 // create a copy and fix any unicode quirks
 function conform_emoji_copy(cps, node) {
 	let copy = Emoji.from(cps); // copy stack
-	if (node.V == 2) copy.splice(1, 1); // delete FE0F at position 1 (see: make.js)
+	if (node.V == 2) copy.splice(1, 1); // delete FE0F at position 1 (see: make.mjs)
 	return copy;
 }
 

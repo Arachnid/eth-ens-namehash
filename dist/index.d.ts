@@ -56,7 +56,7 @@ export function beautify(name: string): string;
 export function tokenize(name: string, options?: {nf?: boolean}): Token[];
 export function split(name: string, preserve_emoji?: boolean): Label[];
 
-export function emojis(): number[][];
+export function allEmoji(): number[][];
 
 export function shouldEscape(cp: number): boolean;
 export function isCombiningMark(cp: number): boolean;

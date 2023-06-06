@@ -1,37 +1,45 @@
 {
-  "name": "@ensdomains/eth-ens-namehash",
-  "version": "3.0.3",
-  "description": "Ethereum Name Service (ENS) Name Normalizer",
-  "keywords": [
-    "ENS",
-    "Ethereum",
-    "UTS-46",
-    "UTS-51",
-    "IDNA",
-    "Normalize",
-    "NFC",
-    "NFD"
-  ],
-  "type": "module",
-  "main": "src/index.js",
-  "types": "src/index.d.ts",
-  "files": [
-    "./src"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/ensdomains/eth-ens-namehash.git"
-  },
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/ensdomains/eth-ens-namehash/issues"
-  },
-  "homepage": "https://github.com/ensdomains/eth-ens-namehash#readme",
-  "author": "raffy.eth",
-  "scripts": {
-    "test": "node test/validate.js && node test/hash.js"
-  },
-  "dependencies": {
-    "js-sha3": "^0.8.0"
-  }
+	"name": "@ensdomains/eth-ens-namehash",
+	"version": "3.1.0",
+	"description": "Ethereum Name Service (ENS) Name Normalizer",
+	"keywords": [
+		"ENS",
+		"Ethereum",
+		"UTS-46",
+		"UTS-51",
+		"IDNA",
+		"Normalize",
+		"NFC",
+		"NFD"
+	],
+	"types": "./dist/index.d.ts",
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.mjs",
+	"files": [
+		"./dist"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/ensdomains/eth-ens-namehash.git"
+	},
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/ensdomains/eth-ens-namehash/issues"
+	},
+	"homepage": "https://github.com/ensdomains/eth-ens-namehash#readme",
+	"author": "Dan Finlay, raffy.eth",
+	"scripts": {
+		"sync": "./sync.sh",
+		"test": "node test/validate.js && node test/hash.js",
+		"build": "rollup -c"
+	},
+	"dependencies": {
+		"js-sha3": "^0.8.0"
+	},
+	"devDependencies": {
+		"@rollup/plugin-commonjs": "^25.0.0",
+		"@rollup/plugin-node-resolve": "^15.1.0",
+		"@rollup/plugin-terser": "^0.4.3",
+		"rollup": "^3.23.1"
+	}
 }

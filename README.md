@@ -2,13 +2,15 @@
 
 [Ethereum Name Service](https://ens.domains/) (ENS) name normalizer and hasher.
 
-* Follows [ENS Name Normalization Standard](https://github.com/adraffy/ensip-norm/blob/main/draft.md)
+* Follows [ENSIP-15: Normalization Standard](https://docs.ens.domains/ens-improvement-proposals/ensip-15-normalization-standard)
 * Derived from [@adraffy/ens-normalize.js](https://github.com/adraffy/ens-normalize.js)
 * Passes [**100%**](https://adraffy.github.io/ens-normalize.js/test/validate.html) Validation Tests
 * Passes [**100%**](https://adraffy.github.io/ens-normalize.js/test/report-nf.html) Unicode `15.0.0` Normalization Tests
-* [Available on NPM](https://www.npmjs.com/package/@ensdomains/eth-ens-namehash)
 
 ## Installation
+
+* [Available on NPM](https://www.npmjs.com/package/@ensdomains/eth-ens-namehash)
+* Depends on [js-sha3](https://www.npmjs.com/package/js-sha3)
 
 ```sh
 npm install @ensdomains/eth-ens-namehash --save
@@ -17,7 +19,8 @@ npm install @ensdomains/eth-ens-namehash --save
 ## Usage Examples
 
 ```Javascript
-import * as lib from '@ensdomains/eth-ens-namehash'; 
+import * as lib from '@ensdomains/eth-ens-namehash';    // ESM
+// const lib = require("@ensdomains/eth-ens-namehash"); // CJS
 
 // *** ALL errors thrown by this library are safe to print ***
 // - characters are shown as {HEX} if should_escape()
@@ -31,18 +34,31 @@ import * as lib from '@ensdomains/eth-ens-namehash';
 Normalize a name:
 ```Javascript
 // string -> string
-// throws on invalid names
+// throws if unnormalizable 
 // output ready for namehash
-let normalized = lib.normalize('👨️‍💻nIcK.EtH');
+let input = '👨️‍💻nIcK.EtH';
+let normalized = lib.normalize(input);
 // "👨‍💻nick.eth"
 ```
 
 Compute the hash of a name:
 ```Javascript
 // string -> 0x-prefixed 64-char hex uint256
-let node = lib.namehash(normalized);
+let node1 = lib.namehash(normalized);
 // "0x6d3ff59a43ac0182b379d3213c30db92d385fbfc34cd77bf66012bf117445848"
-// namehash(normalize(x)) == normhash(x)
+
+// normhash(x) === namehash(normalize(x))
+// throws if unnormalizable
+let node2 = lib.normhash(input); 
+// "0x6d3ff59a43ac0182b379d3213c30db92d385fbfc34cd77bf66012bf117445848" (same)
+// node1 === node2
+```
+
+Compute the hash of a label:
+```Javascript
+// string -> 0x-prefixed 64-char hex uint256
+let hash = lib.labelhash("abc");
+// "0x4e03657aea45a94fc7d47ba826c8d667c0d1e6e33a64a036ec44f58fa12d6c45"
 ```
 
 Format names with fully-qualified emoji:
@@ -122,7 +138,7 @@ let labels = lib.split('💩Raffy.eth_');
 Generate a sorted array of supported emoji codepoints:
 ```Javascript
 // () -> number[][]
-console.log(lib.emojis());
+console.log(lib.allEmoji());
 // [
 //     [ 2764 ],
 //     [ 128169, 65039 ],
@@ -131,8 +147,8 @@ console.log(lib.emojis());
 // ]
 ```
 
-## How to Sync from `@adraffy/ens-normalize.js`
+## Synchronize with `@adraffy/ens-normalize.js`
 
-* Replace corresponding files in `/src/` and `/test/`
-* Copy `/validate/tests.json` to `/test/tests.json`
-* `npm run test`
+1. `chmod +x sync.sh`
+2. `npm run sync`
+3. `npm run test`

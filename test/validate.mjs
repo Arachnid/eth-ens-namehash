@@ -1,5 +1,5 @@
-import {ens_normalize} from '../src/lib.js';
-import {run_tests} from '../src/utils.js';
+import {ens_normalize} from '../src/lib.mjs';
+import {run_tests} from '../src/utils.mjs';
 import {readFileSync} from 'node:fs';
 
 const TESTS = JSON.parse(readFileSync(new URL('./tests.json', import.meta.url)));
