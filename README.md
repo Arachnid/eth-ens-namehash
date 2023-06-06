@@ -44,7 +44,7 @@ let normalized = lib.normalize(input);
 Compute the hash of a name:
 ```Javascript
 // string -> 0x-prefixed 64-char hex uint256
-let node1 = lib.namehash(normalized);
+let node1 = lib.namehash(normalized); // same as hash(x)
 // "0x6d3ff59a43ac0182b379d3213c30db92d385fbfc34cd77bf66012bf117445848"
 
 // normhash(x) === namehash(normalize(x))
@@ -67,7 +67,8 @@ Format names with fully-qualified emoji:
 // output ready for display
 let pretty = lib.beautify('1⃣2⃣.eth'); 
 // "1️⃣2️⃣.eth"
-// note: normalization is unchanged: normalize(beautify(x)) == normalize(x)
+// note: normalization is unchanged: 
+// normalize(beautify(x)) == normalize(x)
 ```
 
 Input-based tokenization:
