@@ -1,35 +1,45 @@
 {
-  "name": "@ensdomains/eth-ens-namehash",
-  "version": "2.0.15",
-  "description": "A simple module for generating ENS namehashes per spec https://github.com/ethereum/EIPs/issues/137",
-  "main": "dist/index.js",
-  "scripts": {
-    "bundle": "rollup --config rollup.config.js",
-    "test": "node test"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/ensdomains/eth-ens-namehash.git"
-  },
-  "keywords": [
-    "Ethereum",
-    "ENS"
-  ],
-  "author": "Dan Finlay <dan@danfinlay.com>",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/ensdomains/eth-ens-namehash/issues"
-  },
-  "homepage": "https://github.com/ensdomains/eth-ens-namehash#readme",
-  "devDependencies": {
-    "@rollup/plugin-commonjs": "^20.0.0",
-    "@rollup/plugin-node-resolve": "^13.0.5",
-    "idna-uts46-hx": "^3.4.0",
-    "js-sha3": "^0.5.7",
-    "rollup": "^2.57.0",
-    "tape": "^4.6.3"
-  },
-  "directories": {
-    "test": "test"
-  }
+	"name": "@ensdomains/eth-ens-namehash",
+	"version": "3.1.0",
+	"description": "Ethereum Name Service (ENS) Name Normalizer",
+	"keywords": [
+		"ENS",
+		"Ethereum",
+		"UTS-46",
+		"UTS-51",
+		"IDNA",
+		"Normalize",
+		"NFC",
+		"NFD"
+	],
+	"types": "./dist/index.d.ts",
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.mjs",
+	"files": [
+		"./dist"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/ensdomains/eth-ens-namehash.git"
+	},
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/ensdomains/eth-ens-namehash/issues"
+	},
+	"homepage": "https://github.com/ensdomains/eth-ens-namehash#readme",
+	"author": "Dan Finlay, raffy.eth",
+	"scripts": {
+		"sync": "./sync.sh",
+		"test": "node test/validate.js && node test/hash.js",
+		"build": "rollup -c"
+	},
+	"dependencies": {
+		"js-sha3": "^0.8.0"
+	},
+	"devDependencies": {
+		"@rollup/plugin-commonjs": "^25.0.0",
+		"@rollup/plugin-node-resolve": "^15.1.0",
+		"@rollup/plugin-terser": "^0.4.3",
+		"rollup": "^3.23.1"
+	}
 }
